@@ -1,8 +1,9 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Targeting
 
-enum InjectMode: String, CaseIterable, Identifiable {
+public enum InjectMode: String, CaseIterable, Identifiable, Sendable {
     case sessionTap
     case postToPid
     case skyLight
@@ -11,9 +12,9 @@ enum InjectMode: String, CaseIterable, Identifiable {
     case keyEscape
     case cascade
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .sessionTap: return "sessionTap (baseline)"
         case .postToPid: return "postToPid"
@@ -26,35 +27,34 @@ enum InjectMode: String, CaseIterable, Identifiable {
     }
 }
 
-struct InjectResult {
-    let mode: InjectMode
-    let posted: Bool
-    let detail: String
-    let cursorBefore: CGPoint
-    let cursorAfter: CGPoint
-    let elapsedMs: Int
+public struct InjectResult: Sendable {
+    public let mode: InjectMode
+    public let posted: Bool
+    public let detail: String
+    public let cursorBefore: CGPoint
+    public let cursorAfter: CGPoint
+    public let elapsedMs: Int
 
-    var summary: String {
+    public var summary: String {
         let delta = InjectLogger.formatDelta(from: cursorBefore, to: cursorAfter)
         return "mode=\(mode.rawValue) result=\(posted ? "posted" : "failed") detail=\(detail) cursorDelta=\(delta) elapsedMs=\(elapsedMs)"
     }
 }
 
-/// CGEvent field constants for window targeting (public in CGEventTypes.h).
 private enum CGMouseEventField {
     static let windowUnderMousePointer: CGEventField = CGEventField(rawValue: 91)!
     static let windowUnderMousePointerThatCanHandleThisEvent: CGEventField = CGEventField(rawValue: 92)!
 }
 
-final class EventInjector {
-    var preferMouseMovedBeforeHID: Bool = true
-    var restoreCursorAfterHID: Bool = true
+public final class EventInjector: @unchecked Sendable {
+    public var preferMouseMovedBeforeHID: Bool = true
+    public var restoreCursorAfterHID: Bool = true
 
     private let source = CGEventSource(stateID: .hidSystemState)
 
-    // MARK: - Public entry points
+    public init() {}
 
-    func injectClick(mode: InjectMode, target: InjectionTarget) -> InjectResult {
+    public func injectClick(mode: InjectMode, target: InjectionTarget) -> InjectResult {
         switch mode {
         case .sessionTap:
             return runTimed(mode: mode) { before in
@@ -83,13 +83,11 @@ final class EventInjector {
         }
     }
 
-    func injectEscape(pid: pid_t) -> InjectResult {
+    public func injectEscape(pid: pid_t) -> InjectResult {
         runTimed(mode: .keyEscape) { _ in
             keyEscape(pid: pid)
         }
     }
-
-    // MARK: - Paths
 
     private func sessionTapClick(target: InjectionTarget, cursorBefore: CGPoint) -> (Bool, String) {
         let point = target.clickPointQuartz
@@ -158,7 +156,6 @@ final class EventInjector {
 
     private func axProbeClick(target: InjectionTarget) -> (Bool, String) {
         let systemWide = AXUIElementCreateSystemWide()
-        // AXUIElementCopyElementAtPosition uses AppKit coordinates.
         var elementRef: AXUIElement?
         let status = AXUIElementCopyElementAtPosition(
             systemWide,
@@ -209,8 +206,6 @@ final class EventInjector {
         let start = CFAbsoluteTimeGetCurrent()
         var steps: [String] = []
 
-        // Stop on first API-level success to avoid double-clicks.
-        // Chrome may silently drop postToPid — pick skyLight manually to verify.
         let pidResult = postToPidClick(target: target)
         steps.append("postToPid=\(pidResult.0 ? "ok" : "fail"):\(pidResult.1)")
         if pidResult.0 {
@@ -243,15 +238,12 @@ final class EventInjector {
         return result
     }
 
-    // MARK: - Helpers
-
     private func makeMouseEvent(type: CGEventType, at point: CGPoint, windowID: CGWindowID?) -> CGEvent? {
-        let button: CGMouseButton = (type == .mouseMoved) ? .left : .left
         guard let event = CGEvent(
             mouseEventSource: source,
             mouseType: type,
             mouseCursorPosition: point,
-            mouseButton: button
+            mouseButton: .left
         ) else {
             return nil
         }

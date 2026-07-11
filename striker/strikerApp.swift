@@ -1,16 +1,17 @@
 import SwiftUI
+import InputRuntime
 
 @main
 struct strikerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject var inputMonitor = InputMonitor()
+    @StateObject var runtime = InputRuntime()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(inputMonitor)
+                .environmentObject(runtime)
                 .onAppear {
-                    appDelegate.bind(inputMonitor: inputMonitor)
+                    appDelegate.bind(runtime: runtime)
                 }
         }
         .commands {

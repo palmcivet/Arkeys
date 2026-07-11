@@ -1,16 +1,12 @@
 import Cocoa
 import SwiftUI
-
-extension Notification.Name {
-    static let showClickOverlay = Notification.Name("showClickOverlay")
-    static let hideClickOverlay = Notification.Name("hideClickOverlay")
-}
+import InputRuntime
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var overlayWindow: NSWindow?
-    private weak var inputMonitor: InputMonitor?
+    private weak var runtime: InputRuntime?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -23,13 +19,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
 
         let pop = NSPopover()
-        pop.contentSize = NSSize(width: 440, height: 480)
+        pop.contentSize = NSSize(width: 460, height: 560)
         pop.behavior = .transient
         popover = pop
 
-        // If SwiftUI bound the monitor before launch finished, attach popover content now.
-        if let inputMonitor {
-            installPopoverContent(inputMonitor: inputMonitor)
+        if let runtime {
+            installPopoverContent(runtime: runtime)
         }
 
         setupOverlayWindow()
@@ -37,16 +32,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(handleHideClickOverlay), name: .hideClickOverlay, object: nil)
     }
 
-    /// Wire the shared InputMonitor. Safe if called before or after didFinishLaunching.
-    func bind(inputMonitor: InputMonitor) {
-        self.inputMonitor = inputMonitor
-        inputMonitor.startIfNeeded()
-        installPopoverContent(inputMonitor: inputMonitor)
+    func bind(runtime: InputRuntime) {
+        self.runtime = runtime
+        Task { @MainActor in
+            runtime.startIfNeeded()
+        }
+        installPopoverContent(runtime: runtime)
     }
 
-    private func installPopoverContent(inputMonitor: InputMonitor) {
+    private func installPopoverContent(runtime: InputRuntime) {
         guard let popover else { return }
-        let root = ContentView().environmentObject(inputMonitor)
+        let root = ContentView().environmentObject(runtime)
         popover.contentViewController = NSHostingController(rootView: root)
     }
 
@@ -71,9 +67,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func createMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "设置", action: #selector(openSettings), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "绑定当前前台", action: #selector(bindFrontmost), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.shared.terminate(_:)), keyEquivalent: "q"))
         return menu
+    }
+
+    @objc func bindFrontmost() {
+        Task { @MainActor in
+            runtime?.bindFrontmostApp()
+        }
     }
 
     @objc func openSettings() {
@@ -81,14 +84,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if popover == nil {
             let pop = NSPopover()
-            pop.contentSize = NSSize(width: 440, height: 480)
+            pop.contentSize = NSSize(width: 460, height: 560)
             pop.behavior = .transient
             popover = pop
         }
         guard let popover else { return }
 
-        if let inputMonitor {
-            installPopoverContent(inputMonitor: inputMonitor)
+        if let runtime {
+            installPopoverContent(runtime: runtime)
         }
 
         if popover.isShown {
@@ -96,16 +99,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard popover.contentViewController != nil else {
-            InjectLogger.log(.capability, "settings popover has no InputMonitor yet")
-            return
-        }
+        guard popover.contentViewController != nil else { return }
 
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
-
-    // MARK: - Click Overlay
 
     func setupOverlayWindow() {
         overlayWindow = NSWindow(

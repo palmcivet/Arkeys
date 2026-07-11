@@ -3,16 +3,16 @@ import ApplicationServices
 import ObjectiveC
 
 /// Soft-loads SkyLight private symbols. Never hard-link the framework.
-final class SkyLightBridge {
-    static let shared = SkyLightBridge()
+public final class SkyLightBridge: @unchecked Sendable {
+    public static let shared = SkyLightBridge()
 
     private typealias SLEventPostToPidFn = @convention(c) (CGEvent?, pid_t) -> Void
 
     private let handle: UnsafeMutableRawPointer?
     private let postToPidFn: SLEventPostToPidFn?
-    private(set) var hasAuthMessage: Bool = false
+    private(set) public var hasAuthMessage: Bool = false
 
-    var isAvailable: Bool { postToPidFn != nil }
+    public var isAvailable: Bool { postToPidFn != nil }
 
     private init() {
         let path = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
@@ -27,17 +27,12 @@ final class SkyLightBridge {
         hasAuthMessage = Self.resolveAuthMessageSupport()
     }
 
-    /// Posts a CGEvent via SkyLight's WindowServer trust path.
-    /// Returns false if the symbol is missing.
     @discardableResult
-    func post(_ event: CGEvent, to pid: pid_t) -> Bool {
+    public func post(_ event: CGEvent, to pid: pid_t) -> Bool {
         guard let postToPidFn else {
             InjectLogger.log(.inject, "skyLightUnavailable symbol=SLEventPostToPid")
             return false
         }
-
-        // Auth envelope only exists usefully on macOS 15+; gated in CapabilityProbe.
-        // Plain SLEventPostToPid is the path used for PoC on 14+.
         _ = hasAuthMessage
         postToPidFn(event, pid)
         return true
@@ -45,12 +40,10 @@ final class SkyLightBridge {
 
     private static func resolveAuthMessageSupport() -> Bool {
         guard #available(macOS 15.0, *) else { return false }
-
         guard let cls = NSClassFromString("SLSEventAuthenticationMessage") as? NSObject.Type else {
             return false
         }
         let sel = NSSelectorFromString("messageWithEventRecord:pid:version:")
-        // class_respondsToSelector checks the metaclass for factory methods.
         return cls.responds(to: sel)
     }
 }

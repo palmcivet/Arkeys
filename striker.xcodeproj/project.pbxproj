@@ -112,6 +112,12 @@
 			);
 			name = striker;
 			packageProductDependencies = (
+				A10000012DCD20000041B68C /* KeymapCore */,
+				A10000022DCD20000041B68C /* KeymapPlayCover */,
+				A10000032DCD20000041B68C /* Targeting */,
+				A10000042DCD20000041B68C /* Injection */,
+				A10000052DCD20000041B68C /* InputRuntime */,
+				A10000062DCD20000041B68C /* EditorKit */,
 			);
 			productName = striker;
 			productReference = C41E17252DCD08D90041B68C /* striker.app */;
@@ -196,6 +202,14 @@
 			);
 			mainGroup = C41E171C2DCD08D90041B68C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000102DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapCore" */,
+				A10000112DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapPlayCover" */,
+				A10000122DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Targeting" */,
+				A10000132DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Injection" */,
+				A10000142DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/InputRuntime" */,
+				A10000152DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/EditorKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C41E17262DCD08D90041B68C /* Products */;
 			projectDirPath = "";
@@ -592,6 +606,66 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000102DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KeymapCore;
+		};
+		A10000112DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapPlayCover" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KeymapPlayCover;
+		};
+		A10000122DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Targeting" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Targeting;
+		};
+		A10000132DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Injection" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Injection;
+		};
+		A10000142DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/InputRuntime" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/InputRuntime;
+		};
+		A10000152DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/EditorKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EditorKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000012DCD20000041B68C /* KeymapCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000102DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapCore" */;
+			productName = KeymapCore;
+		};
+		A10000022DCD20000041B68C /* KeymapPlayCover */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000112DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/KeymapPlayCover" */;
+			productName = KeymapPlayCover;
+		};
+		A10000032DCD20000041B68C /* Targeting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000122DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Targeting" */;
+			productName = Targeting;
+		};
+		A10000042DCD20000041B68C /* Injection */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000132DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Injection" */;
+			productName = Injection;
+		};
+		A10000052DCD20000041B68C /* InputRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000142DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/InputRuntime" */;
+			productName = InputRuntime;
+		};
+		A10000062DCD20000041B68C /* EditorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000152DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/EditorKit" */;
+			productName = EditorKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C41E171D2DCD08D90041B68C /* Project object */;
 }

@@ -2,21 +2,21 @@ import Foundation
 import ApplicationServices
 import AppKit
 
-struct CapabilityReport {
-    let osVersion: String
-    let accessibilityTrusted: Bool
-    let eventTapCreatable: Bool
-    let skyLightPostToPid: Bool
-    let authMessage: Bool
-    let sandboxEnabled: Bool
+public struct CapabilityReport: Sendable {
+    public let osVersion: String
+    public let accessibilityTrusted: Bool
+    public let eventTapCreatable: Bool
+    public let skyLightPostToPid: Bool
+    public let authMessage: Bool
+    public let sandboxEnabled: Bool
 
-    var summaryLine: String {
+    public var summaryLine: String {
         "[Striker][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
     }
 }
 
-enum CapabilityProbe {
-    static func run(promptAccessibility: Bool = true) -> CapabilityReport {
+public enum CapabilityProbe {
+    public static func run(promptAccessibility: Bool = true) -> CapabilityReport {
         let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
 
         let axTrusted: Bool

@@ -2,108 +2,93 @@ import Cocoa
 import SwiftUI
 import InputRuntime
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private(set) var runtime: InputRuntime?
     private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
+    private var settingsWindow: NSWindow?
     private var overlayWindow: NSWindow?
-    private weak var runtime: InputRuntime?
+
+    private static let settingsWidth: CGFloat = 460
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Hide Dock icon before the app finishes launching.
+        NSApp.setActivationPolicy(.accessory)
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let runtime = InputRuntime()
+        self.runtime = runtime
+
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             button.image = NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Striker")
-            button.action = #selector(statusItemClicked(_:))
-            button.target = self
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+        let menu = NSMenu()
+        menu.delegate = self
+        item.menu = menu
         statusItem = item
 
-        let pop = NSPopover()
-        pop.contentSize = NSSize(width: 460, height: 560)
-        pop.behavior = .transient
-        popover = pop
-
-        if let runtime {
-            installPopoverContent(runtime: runtime)
-        }
+        runtime.startIfNeeded()
 
         setupOverlayWindow()
         NotificationCenter.default.addObserver(self, selector: #selector(handleShowClickOverlay), name: .showClickOverlay, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleHideClickOverlay), name: .hideClickOverlay, object: nil)
     }
 
-    func bind(runtime: InputRuntime) {
-        self.runtime = runtime
-        Task { @MainActor in
-            runtime.startIfNeeded()
-        }
-        installPopoverContent(runtime: runtime)
-    }
+    // MARK: - Tray menu
 
-    private func installPopoverContent(runtime: InputRuntime) {
-        guard let popover else { return }
-        let root = ContentView().environmentObject(runtime)
-        popover.contentViewController = NSHostingController(rootView: root)
-    }
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
 
-    @objc func statusItemClicked(_ sender: AnyObject?) {
-        guard let event = NSApp.currentEvent else {
-            openSettings()
-            return
-        }
-        if event.type == .rightMouseUp {
-            guard let statusItem else { return }
-            let menu = createMenu()
-            statusItem.menu = menu
-            statusItem.button?.performClick(nil)
-            DispatchQueue.main.async {
-                statusItem.menu = nil
-            }
-            return
-        }
-        openSettings()
-    }
+        let enabled = runtime?.isEnabled ?? false
+        let toggle = NSMenuItem(
+            title: "启用",
+            action: #selector(toggleEnabled),
+            keyEquivalent: ""
+        )
+        toggle.state = enabled ? .on : .off
+        menu.addItem(toggle)
 
-    func createMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "设置", action: #selector(openSettings), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "绑定前台为目标", action: #selector(bindFrontmost), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "设置", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.shared.terminate(_:)), keyEquivalent: "q"))
-        return menu
     }
 
-    @objc func bindFrontmost() {
-        Task { @MainActor in
-            runtime?.bindFrontmostApp()
-        }
+    @objc func toggleEnabled() {
+        runtime?.isEnabled.toggle()
     }
 
     @objc func openSettings() {
-        guard let statusItem, let button = statusItem.button else { return }
+        guard let runtime else { return }
 
-        if popover == nil {
-            let pop = NSPopover()
-            pop.contentSize = NSSize(width: 460, height: 560)
-            pop.behavior = .transient
-            popover = pop
+        if settingsWindow == nil {
+            let root = ContentView().environmentObject(runtime)
+            let hosting = NSHostingController(rootView: root)
+            hosting.view.frame.size = NSSize(width: Self.settingsWidth, height: 560)
+
+            let window = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: Self.settingsWidth, height: 560),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Striker 设置"
+            window.contentViewController = hosting
+            window.isReleasedWhenClosed = false
+            window.hidesOnDeactivate = false
+            // Fixed width; height remains resizable.
+            window.contentMinSize = NSSize(width: Self.settingsWidth, height: 400)
+            window.contentMaxSize = NSSize(width: Self.settingsWidth, height: 10_000)
+            window.center()
+            settingsWindow = window
         }
-        guard let popover else { return }
 
-        if let runtime {
-            installPopoverContent(runtime: runtime)
-        }
-
-        if popover.isShown {
-            popover.performClose(nil)
-            return
-        }
-
-        guard popover.contentViewController != nil else { return }
-
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
+
+    // MARK: - Click overlay
 
     func setupOverlayWindow() {
         overlayWindow = NSWindow(

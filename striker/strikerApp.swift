@@ -4,15 +4,12 @@ import InputRuntime
 @main
 struct strikerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject var runtime = InputRuntime()
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(runtime)
-                .onAppear {
-                    appDelegate.bind(runtime: runtime)
-                }
+        // Menu-bar agent: no main window, no Dock icon (LSUIElement + .accessory).
+        // Settings UI is hosted by AppDelegate's fixed-width panel.
+        Settings {
+            EmptyView()
         }
         .commands {
             CommandGroup(replacing: .appSettings) {

@@ -42,11 +42,6 @@ struct ContentView: View {
                             Button("选择应用…") {
                                 isPickingApp = true
                             }
-                            Button("绑定前台") {
-                                runtime.bindFrontmostApp()
-                                statusMessage = "已绑定当前前台：\(runtime.targetAppName)"
-                            }
-                            .help("把此刻最前面的应用设为 Target（先点一下目标窗口再点此按钮）")
                         }
 
                         Text(runtime.targetBundleID ?? "(no bundle id)")
@@ -56,6 +51,32 @@ struct ContentView: View {
 
                     Text("Keymap（键鼠方案）")
                         .font(.headline)
+
+                    if runtime.targetBundleID == nil {
+                        Text("请先选择目标应用，再导入或新建方案。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if runtime.schemes.isEmpty {
+                        Text("尚无方案 — 可新建或导入。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("当前方案", selection: Binding(
+                            get: { runtime.activeSchemeID },
+                            set: { newID in
+                                if let newID {
+                                    runtime.selectScheme(id: newID)
+                                }
+                            }
+                        )) {
+                            ForEach(runtime.schemes) { scheme in
+                                Text(scheme.name).tag(Optional(scheme.id))
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .disabled(editor.isActive)
+                    }
+
                     Text(runtime.keymapSummary)
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
@@ -65,10 +86,11 @@ struct ContentView: View {
                             .disabled(runtime.targetBundleID == nil || editor.isActive)
                             .help("为目标应用创建空白键位图，并进入 overlay 编辑")
                         Button("编辑方案") { beginEdit() }
-                            .disabled(runtime.targetBundleID == nil || editor.isActive)
+                            .disabled(runtime.activeSchemeID == nil || editor.isActive)
                         Button("导入 PlayCover…") { isImporting = true }
-                        Button("清空") { runtime.clearKeymap() }
-                            .disabled(runtime.targetBundleID == nil)
+                            .disabled(runtime.targetBundleID == nil || editor.isActive)
+                        Button("删除方案") { deleteActiveScheme() }
+                            .disabled(runtime.activeSchemeID == nil || editor.isActive)
                     }
 
                     if let importError {
@@ -136,7 +158,8 @@ struct ContentView: View {
             }
             .padding()
         }
-        .frame(minWidth: 440, minHeight: 520)
+        .frame(width: 460)
+        .frame(minHeight: 520)
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.propertyList, .data],
@@ -178,16 +201,23 @@ struct ContentView: View {
     }
 
     private func createNewScheme() {
-        guard runtime.createNewKeymap() else {
+        let name = nextUntitledSchemeName()
+        guard runtime.createNewKeymap(name: name) else {
             statusMessage = "请先选择目标应用"
             return
         }
-        statusMessage = "已新建空白方案"
+        statusMessage = "已新建：\(name)"
         beginEdit()
     }
 
+    private func deleteActiveScheme() {
+        let name = runtime.schemes.first(where: { $0.id == runtime.activeSchemeID })?.name ?? "方案"
+        runtime.deleteActiveScheme()
+        statusMessage = "已删除：\(name)"
+    }
+
     private func beginEdit() {
-        guard let bundleID = runtime.targetBundleID else { return }
+        guard let bundleID = runtime.targetBundleID, runtime.activeSchemeID != nil else { return }
         wireEditorCallbacks()
         runtime.isEditing = true
         runtime.onEditorKeyDown = { [weak editor] code, name in
@@ -205,11 +235,23 @@ struct ContentView: View {
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
             let data = try Data(contentsOf: url)
             let map = try registry.importKeymap(data: data, filename: url.lastPathComponent)
-            runtime.applyImportedKeymap(map)
-            statusMessage = "已导入方案"
+            let suggested = url.deletingPathExtension().lastPathComponent
+            runtime.applyImportedKeymap(map, suggestedName: suggested)
+            statusMessage = "已导入：\(suggested)"
         } catch {
             importError = error.localizedDescription
         }
+    }
+
+    private func nextUntitledSchemeName() -> String {
+        let base = "未命名方案"
+        let existing = Set(runtime.schemes.map(\.name))
+        guard existing.contains(base) else { return base }
+        var index = 2
+        while existing.contains("\(base) \(index)") {
+            index += 1
+        }
+        return "\(base) \(index)"
     }
 }
 

@@ -115,11 +115,14 @@ public final class KeymapEditorController: ObservableObject {
 
     private func startFollowing() {
         followTimer?.invalidate()
-        followTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        // Track move/resize even while the editor overlay is key (target is not focused).
+        let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.syncOverlayFrame()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        followTimer = timer
         syncOverlayFrame()
     }
 
@@ -131,7 +134,7 @@ public final class KeymapEditorController: ObservableObject {
     private func syncOverlayFrame() {
         guard let targetBundleID,
               let app = NSRunningApplication.runningApplications(withBundleIdentifier: targetBundleID).first,
-              let frame = TargetResolver.focusedWindowFrame(for: app) else {
+              let frame = TargetResolver.primaryWindowFrame(for: app) else {
             statusText = "Waiting for target window…"
             return
         }

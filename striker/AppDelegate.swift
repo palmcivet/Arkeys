@@ -67,7 +67,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func createMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "设置", action: #selector(openSettings), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "绑定当前前台", action: #selector(bindFrontmost), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "绑定前台为目标", action: #selector(bindFrontmost), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.shared.terminate(_:)), keyEquivalent: "q"))
         return menu

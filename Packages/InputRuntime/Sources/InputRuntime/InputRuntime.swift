@@ -82,18 +82,33 @@ public final class InputRuntime: ObservableObject {
     }
 
     public func bindFrontmostApp() {
-        guard let app = NSWorkspace.shared.frontmostApplication,
-              let bundleID = app.bundleIdentifier else {
-            InjectLogger.log(.target, "cannot bind frontmost — missing bundle id")
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            InjectLogger.log(.target, "cannot bind frontmost — no frontmost app")
             return
         }
-        // Avoid binding Striker itself when settings are frontmost.
+        bind(app: app)
+    }
+
+    /// Bind a specific running app as the injection target (focus gate).
+    public func bind(app: NSRunningApplication) {
+        guard let bundleID = app.bundleIdentifier else {
+            InjectLogger.log(.target, "cannot bind — missing bundle id")
+            return
+        }
+        if bundleID == Bundle.main.bundleIdentifier {
+            InjectLogger.log(.target, "skip binding Striker itself")
+            return
+        }
+        bind(bundleID: bundleID, appName: app.localizedName ?? bundleID)
+    }
+
+    public func bind(bundleID: String, appName: String? = nil) {
         if bundleID == Bundle.main.bundleIdentifier {
             InjectLogger.log(.target, "skip binding Striker itself")
             return
         }
         targetBundleID = bundleID
-        targetAppName = app.localizedName ?? bundleID
+        targetAppName = appName ?? RunningAppCatalog.runningApplication(bundleID: bundleID)?.localizedName ?? bundleID
         if let loaded = store.load(bundleID: bundleID) {
             keymap = loaded
         } else {
@@ -101,6 +116,23 @@ public final class InputRuntime: ObservableObject {
         }
         refreshKeymapSummary()
         InjectLogger.log(.target, "bound target=\(targetAppName) id=\(bundleID)")
+    }
+
+    /// Create a blank Striker keymap for the current target and persist it.
+    @discardableResult
+    public func createNewKeymap() -> Bool {
+        guard let targetBundleID else {
+            InjectLogger.log(.target, "cannot create keymap — no target")
+            return false
+        }
+        keymap = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
+        saveKeymap()
+        InjectLogger.log(.target, "created new empty keymap for \(targetBundleID)")
+        return true
+    }
+
+    public func selectableApps() -> [SelectableApp] {
+        RunningAppCatalog.selectableApps()
     }
 
     public func saveKeymap() {

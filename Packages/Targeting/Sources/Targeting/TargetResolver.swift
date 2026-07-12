@@ -45,19 +45,8 @@ public enum TargetResolver {
 
     /// `relativeX/Y` are fractions 0...1 from the window's top-left.
     public static func resolve(app: NSRunningApplication, relativeX: Double, relativeY: Double) -> InjectionTarget? {
+        guard let frame = primaryWindowFrame(for: app) else { return nil }
         let pid = app.processIdentifier
-        let appName = app.localizedName ?? "Unknown"
-        let axApp = AXUIElementCreateApplication(pid)
-
-        var windowRef: AnyObject?
-        let winResult = AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef)
-        guard winResult == .success, let focusedWindow = windowRef else {
-            return nil
-        }
-
-        let axWindow = focusedWindow as! AXUIElement
-        guard let frame = windowFrame(axWindow: axWindow) else { return nil }
-
         let clickAppKit = CGPoint(
             x: frame.origin.x + frame.size.width * relativeX,
             y: frame.origin.y + frame.size.height * (1.0 - relativeY)
@@ -67,7 +56,7 @@ public enum TargetResolver {
 
         return InjectionTarget(
             pid: pid,
-            appName: appName,
+            appName: app.localizedName ?? "Unknown",
             bundleIdentifier: app.bundleIdentifier,
             windowFrame: frame,
             windowID: windowID,
@@ -79,18 +68,24 @@ public enum TargetResolver {
     /// Absolute point offsets from top-left (legacy PoC units).
     public static func resolveFrontmost(pointOffsetX: Int, pointOffsetY: Int) -> InjectionTarget? {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
-        guard let frame = focusedWindowFrame(for: app) else { return nil }
+        guard let frame = primaryWindowFrame(for: app) else { return nil }
         let relX = frame.width > 0 ? Double(pointOffsetX) / Double(frame.width) : 0
         let relY = frame.height > 0 ? Double(pointOffsetY) / Double(frame.height) : 0
         return resolve(app: app, relativeX: relX, relativeY: relY)
     }
 
+    /// Preferred window frame for overlays / injection (AppKit screen coords).
+    /// Prefer CGWindowList (works when the app is not frontmost); fall back to AX.
+    public static func primaryWindowFrame(for app: NSRunningApplication) -> CGRect? {
+        if let cg = largestOnScreenWindowFrameAppKit(pid: app.processIdentifier) {
+            return cg
+        }
+        return axBestWindowFrame(for: app)
+    }
+
+    /// - Warning: Prefer `primaryWindowFrame(for:)` — focused AX often fails when Striker is frontmost.
     public static func focusedWindowFrame(for app: NSRunningApplication) -> CGRect? {
-        let axApp = AXUIElementCreateApplication(app.processIdentifier)
-        var windowRef: AnyObject?
-        let winResult = AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef)
-        guard winResult == .success, let focusedWindow = windowRef else { return nil }
-        return windowFrame(axWindow: focusedWindow as! AXUIElement)
+        primaryWindowFrame(for: app)
     }
 
     public static func appKitToQuartz(_ point: CGPoint) -> CGPoint {
@@ -101,6 +96,92 @@ public enum TargetResolver {
     public static func quartzToAppKit(_ point: CGPoint) -> CGPoint {
         let primaryMaxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
         return CGPoint(x: point.x, y: primaryMaxY - point.y)
+    }
+
+    public static func quartzFrameToAppKit(_ frame: CGRect) -> CGRect {
+        let primaryMaxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
+        let bottomLeftY = primaryMaxY - frame.origin.y - frame.height
+        return CGRect(x: frame.origin.x, y: bottomLeftY, width: frame.width, height: frame.height)
+    }
+
+    public static func appKitFrameToQuartz(_ frame: CGRect) -> CGRect {
+        let topLeft = appKitToQuartz(CGPoint(x: frame.minX, y: frame.maxY))
+        return CGRect(x: topLeft.x, y: topLeft.y, width: frame.width, height: frame.height)
+    }
+
+    // MARK: - CGWindowList (Quartz bounds → AppKit)
+
+    private static func largestOnScreenWindowFrameAppKit(pid: pid_t) -> CGRect? {
+        guard let entry = largestOnScreenWindow(pid: pid) else { return nil }
+        return quartzFrameToAppKit(entry.bounds)
+    }
+
+    private static func largestOnScreenWindow(pid: pid_t) -> (windowID: CGWindowID, bounds: CGRect)? {
+        guard let infoList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+
+        var best: (CGWindowID, CGRect, CGFloat)?
+
+        for info in infoList {
+            guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t, ownerPID == pid else { continue }
+            guard let layer = info[kCGWindowLayer as String] as? Int, layer == 0 else { continue }
+            if let alpha = info[kCGWindowAlpha as String] as? CGFloat, alpha <= 0.01 { continue }
+            guard let number = info[kCGWindowNumber as String] as? CGWindowID else { continue }
+            guard let boundsDict = info[kCGWindowBounds as String] as? [String: CGFloat] else { continue }
+
+            let bounds = CGRect(
+                x: boundsDict["X"] ?? 0,
+                y: boundsDict["Y"] ?? 0,
+                width: boundsDict["Width"] ?? 0,
+                height: boundsDict["Height"] ?? 0
+            )
+            // Ignore menu-bar-sized / tiny chrome.
+            guard bounds.width >= 120, bounds.height >= 80 else { continue }
+
+            let area = bounds.area
+            if best == nil || area > best!.2 {
+                best = (number, bounds, area)
+            }
+        }
+
+        guard let best else { return nil }
+        return (best.0, best.1)
+    }
+
+    // MARK: - AX fallback
+
+    private static func axBestWindowFrame(for app: NSRunningApplication) -> CGRect? {
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+
+        if let main = axCopyWindow(axApp, attribute: kAXMainWindowAttribute as CFString),
+           let frame = windowFrame(axWindow: main) {
+            return frame
+        }
+        if let focused = axCopyWindow(axApp, attribute: kAXFocusedWindowAttribute as CFString),
+           let frame = windowFrame(axWindow: focused) {
+            return frame
+        }
+
+        var windowsRef: AnyObject?
+        let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
+        guard result == .success, let windows = windowsRef as? [AXUIElement] else { return nil }
+
+        var best: CGRect?
+        for window in windows {
+            guard let frame = windowFrame(axWindow: window) else { continue }
+            if best == nil || frame.area > best!.area {
+                best = frame
+            }
+        }
+        return best
+    }
+
+    private static func axCopyWindow(_ axApp: AXUIElement, attribute: CFString) -> AXUIElement? {
+        var ref: AnyObject?
+        let result = AXUIElementCopyAttributeValue(axApp, attribute, &ref)
+        guard result == .success, let ref else { return nil }
+        return (ref as! AXUIElement)
     }
 
     private static func windowFrame(axWindow: AXUIElement) -> CGRect? {
@@ -122,20 +203,24 @@ public enum TargetResolver {
     }
 
     private static func resolveWindowID(pid: pid_t, frame: CGRect) -> CGWindowID? {
-        guard let infoList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
-            return nil
+        if let entry = largestOnScreenWindow(pid: pid) {
+            let axQuartz = appKitFrameToQuartz(frame)
+            let overlap = entry.bounds.intersection(axQuartz).area
+            if overlap > 0 || entry.bounds.area >= axQuartz.area * 0.5 {
+                return entry.windowID
+            }
         }
 
-        let matches = infoList.filter { info in
-            guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t, ownerPID == pid else { return false }
-            guard let layer = info[kCGWindowLayer as String] as? Int, layer == 0 else { return false }
-            return true
+        guard let infoList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
         }
 
         let axQuartz = appKitFrameToQuartz(frame)
         var best: (CGWindowID, CGFloat)?
 
-        for info in matches {
+        for info in infoList {
+            guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t, ownerPID == pid else { continue }
+            guard let layer = info[kCGWindowLayer as String] as? Int, layer == 0 else { continue }
             guard let number = info[kCGWindowNumber as String] as? CGWindowID else { continue }
             guard let boundsDict = info[kCGWindowBounds as String] as? [String: CGFloat] else {
                 if best == nil { best = (number, 0) }
@@ -154,11 +239,6 @@ public enum TargetResolver {
         }
 
         return best?.0
-    }
-
-    private static func appKitFrameToQuartz(_ frame: CGRect) -> CGRect {
-        let topLeft = appKitToQuartz(CGPoint(x: frame.minX, y: frame.maxY))
-        return CGRect(x: topLeft.x, y: topLeft.y, width: frame.width, height: frame.height)
     }
 }
 

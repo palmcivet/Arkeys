@@ -9,6 +9,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var injectModeRaw: String
     public var preferMouseMovedBeforeHID: Bool
     public var restoreCursorAfterHID: Bool
+    public var showMenuBarIcon: Bool
 
     public init(
         lastTargetBundleID: String? = nil,
@@ -16,7 +17,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         isEnabled: Bool = true,
         injectModeRaw: String = "postToPid",
         preferMouseMovedBeforeHID: Bool = true,
-        restoreCursorAfterHID: Bool = true
+        restoreCursorAfterHID: Bool = true,
+        showMenuBarIcon: Bool = true
     ) {
         self.lastTargetBundleID = lastTargetBundleID
         self.lastTargetAppName = lastTargetAppName
@@ -24,6 +26,28 @@ public struct AppSettings: Codable, Hashable, Sendable {
         self.injectModeRaw = injectModeRaw
         self.preferMouseMovedBeforeHID = preferMouseMovedBeforeHID
         self.restoreCursorAfterHID = restoreCursorAfterHID
+        self.showMenuBarIcon = showMenuBarIcon
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case lastTargetBundleID
+        case lastTargetAppName
+        case isEnabled
+        case injectModeRaw
+        case preferMouseMovedBeforeHID
+        case restoreCursorAfterHID
+        case showMenuBarIcon
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lastTargetBundleID = try container.decodeIfPresent(String.self, forKey: .lastTargetBundleID)
+        lastTargetAppName = try container.decodeIfPresent(String.self, forKey: .lastTargetAppName)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        injectModeRaw = try container.decodeIfPresent(String.self, forKey: .injectModeRaw) ?? "postToPid"
+        preferMouseMovedBeforeHID = try container.decodeIfPresent(Bool.self, forKey: .preferMouseMovedBeforeHID) ?? true
+        restoreCursorAfterHID = try container.decodeIfPresent(Bool.self, forKey: .restoreCursorAfterHID) ?? true
+        showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
     }
 }
 

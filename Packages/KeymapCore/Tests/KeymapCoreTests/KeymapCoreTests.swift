@@ -74,7 +74,8 @@ final class KeymapCoreTests: XCTestCase {
             isEnabled: false,
             injectModeRaw: "hidTap",
             preferMouseMovedBeforeHID: false,
-            restoreCursorAfterHID: true
+            restoreCursorAfterHID: true,
+            showMenuBarIcon: false
         )
         try store.save(settings)
         let loaded = store.load()
@@ -82,5 +83,6 @@ final class KeymapCoreTests: XCTestCase {
         XCTAssertEqual(loaded.injectModeRaw, "hidTap")
         XCTAssertFalse(loaded.isEnabled)
         XCTAssertFalse(loaded.preferMouseMovedBeforeHID)
+        XCTAssertFalse(loaded.showMenuBarIcon)
     }
 }

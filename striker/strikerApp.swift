@@ -13,7 +13,7 @@ struct strikerApp: App {
         }
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("设置") {
+                Button("menu.settings") {
                     appDelegate.openSettings()
                 }
             }

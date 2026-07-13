@@ -8,22 +8,52 @@ public enum InjectMode: String, CaseIterable, Identifiable, Sendable {
     case postToPid
     case skyLight
     case hidTap
-    case axProbe
-    case keyEscape
     case cascade
 
     public var id: String { rawValue }
 
+    /// User-facing inject routes (excludes PoC-only baselines).
+    public static var productCases: [InjectMode] {
+        [.cascade, .postToPid, .skyLight, .hidTap]
+    }
+
+    /// English name for logs only — UI localizes via app String Catalog.
     public var displayName: String {
         switch self {
         case .sessionTap: return "sessionTap (baseline)"
         case .postToPid: return "postToPid"
         case .skyLight: return "skyLight"
         case .hidTap: return "hidTap"
-        case .axProbe: return "axProbe"
-        case .keyEscape: return "keyEscape"
         case .cascade: return "cascade"
         }
+    }
+
+    public func isAvailable(given report: CapabilityReport) -> Bool {
+        switch self {
+        case .postToPid:
+            return report.accessibilityTrusted
+        case .skyLight:
+            return report.skyLightPostToPid
+        case .hidTap, .sessionTap:
+            return report.eventTapCreatable
+        case .cascade:
+            return report.accessibilityTrusted
+                || report.skyLightPostToPid
+                || report.eventTapCreatable
+        }
+    }
+
+    /// Resolve a persisted/raw mode into a usable product mode.
+    public static func resolvedProductMode(raw: String?, report: CapabilityReport?) -> InjectMode {
+        let candidate: InjectMode
+        if let raw, let mode = InjectMode(rawValue: raw), productCases.contains(mode) {
+            candidate = mode
+        } else {
+            candidate = .cascade
+        }
+        guard let report else { return candidate }
+        if candidate.isAvailable(given: report) { return candidate }
+        return productCases.first { $0.isAvailable(given: report) } ?? .postToPid
     }
 }
 
@@ -72,20 +102,8 @@ public final class EventInjector: @unchecked Sendable {
             return runTimed(mode: mode) { before in
                 hidTapClick(target: target, cursorBefore: before)
             }
-        case .axProbe:
-            return runTimed(mode: mode) { _ in
-                axProbeClick(target: target)
-            }
-        case .keyEscape:
-            return injectEscape(pid: target.pid)
         case .cascade:
             return cascadeClick(target: target)
-        }
-    }
-
-    public func injectEscape(pid: pid_t) -> InjectResult {
-        runTimed(mode: .keyEscape) { _ in
-            keyEscape(pid: pid)
         }
     }
 
@@ -152,53 +170,6 @@ public final class EventInjector: @unchecked Sendable {
             notes.append("warpRestore")
         }
         return (true, notes.joined(separator: "+"))
-    }
-
-    private func axProbeClick(target: InjectionTarget) -> (Bool, String) {
-        let systemWide = AXUIElementCreateSystemWide()
-        var elementRef: AXUIElement?
-        let status = AXUIElementCopyElementAtPosition(
-            systemWide,
-            Float(target.clickPointAppKit.x),
-            Float(target.clickPointAppKit.y),
-            &elementRef
-        )
-
-        guard status == .success, let element = elementRef else {
-            return (false, "noElementAtPosition axStatus=\(status.rawValue)")
-        }
-
-        var roleValue: AnyObject?
-        var titleValue: AnyObject?
-        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
-        AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleValue)
-        let role = roleValue as? String ?? "?"
-        let title = titleValue as? String ?? ""
-
-        var actionsRef: CFArray?
-        AXUIElementCopyActionNames(element, &actionsRef)
-        let actions = (actionsRef as? [String]) ?? []
-
-        InjectLogger.log(.inject, "axProbe role=\(role) title=\(title) actions=\(actions.joined(separator: ","))")
-
-        if actions.contains(kAXPressAction as String) {
-            let press = AXUIElementPerformAction(element, kAXPressAction as CFString)
-            let ok = press == .success
-            return (ok, "AXPress role=\(role) title=\(title) status=\(press.rawValue)")
-        }
-
-        return (false, "noAXPress role=\(role) title=\(title) actions=\(actions.joined(separator: ","))")
-    }
-
-    private func keyEscape(pid: pid_t) -> (Bool, String) {
-        let escapeKey: CGKeyCode = 0x35
-        guard let down = CGEvent(keyboardEventSource: source, virtualKey: escapeKey, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: escapeKey, keyDown: false) else {
-            return (false, "eventCreateFailed")
-        }
-        down.postToPid(pid)
-        up.postToPid(pid)
-        return (true, "escapePostToPid")
     }
 
     private func cascadeClick(target: InjectionTarget) -> InjectResult {

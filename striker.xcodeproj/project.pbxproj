@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C44EA0283004B6EC00D71C22 /* KeymapCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000012DCD20000041B68C /* KeymapCore */; };
+		C44EA0293004B6EC00D71C22 /* KeymapPlayCover in Frameworks */ = {isa = PBXBuildFile; productRef = A10000022DCD20000041B68C /* KeymapPlayCover */; };
+		C44EA02A3004B6EC00D71C22 /* Targeting in Frameworks */ = {isa = PBXBuildFile; productRef = A10000032DCD20000041B68C /* Targeting */; };
+		C44EA02B3004B6EC00D71C22 /* Injection in Frameworks */ = {isa = PBXBuildFile; productRef = A10000042DCD20000041B68C /* Injection */; };
+		C44EA02C3004B6EC00D71C22 /* InputRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052DCD20000041B68C /* InputRuntime */; };
+		C44EA02D3004B6EC00D71C22 /* EditorKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000062DCD20000041B68C /* EditorKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C41E17342DCD08DA0041B68C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +61,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C44EA02D3004B6EC00D71C22 /* EditorKit in Frameworks */,
+				C44EA02C3004B6EC00D71C22 /* InputRuntime in Frameworks */,
+				C44EA02B3004B6EC00D71C22 /* Injection in Frameworks */,
+				C44EA02A3004B6EC00D71C22 /* Targeting in Frameworks */,
+				C44EA0293004B6EC00D71C22 /* KeymapPlayCover in Frameworks */,
+				C44EA0283004B6EC00D71C22 /* KeymapCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -193,7 +208,7 @@
 				};
 			};
 			buildConfigurationList = C41E17202DCD08D90041B68C /* Build configuration list for PBXProject "striker" */;
-			developmentRegion = "zh-Hans";
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,

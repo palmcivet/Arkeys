@@ -1,0 +1,510 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "tab.general" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "General" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "常规" } }
+      }
+    },
+    "tab.keymap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keymap" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "键鼠方案" } }
+      }
+    },
+    "tab.compatibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Compatibility" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "兼容性" } }
+      }
+    },
+    "tab.about" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "About" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关于" } }
+      }
+    },
+    "settings.window.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Striker Settings" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Striker 设置" } }
+      }
+    },
+    "menu.enable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用" } }
+      }
+    },
+    "menu.scheme" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scheme" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前方案" } }
+      }
+    },
+    "menu.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置…" } }
+      }
+    },
+    "menu.quit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出" } }
+      }
+    },
+    "menu.noSchemes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Schemes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无方案" } }
+      }
+    },
+    "general.enabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enabled" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用" } }
+      }
+    },
+    "general.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Target App" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "目标应用" } }
+      }
+    },
+    "general.target.choose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose App…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择应用…" } }
+      }
+    },
+    "general.target.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "None" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未选择" } }
+      }
+    },
+    "general.target.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Key bindings only fire when this app is frontmost." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "仅当该应用在前台时，键位才会生效。" } }
+      }
+    },
+    "general.menuBarIcon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Menu Bar Icon" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示菜单栏图标" } }
+      }
+    },
+    "keymap.current" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current Scheme" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前方案" } }
+      }
+    },
+    "keymap.needTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a target app before creating or importing a scheme." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请先选择目标应用，再导入或新建方案。" } }
+      }
+    },
+    "keymap.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No schemes yet — create or import one." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚无方案 — 可新建或导入。" } }
+      }
+    },
+    "keymap.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "新建" } }
+      }
+    },
+    "keymap.edit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑" } }
+      }
+    },
+    "keymap.import" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Import…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导入…" } }
+      }
+    },
+    "keymap.export" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "导出…" } }
+      }
+    },
+    "keymap.delete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除" } }
+      }
+    },
+    "keymap.untitled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled Scheme" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未命名方案" } }
+      }
+    },
+    "keymap.summary %lld %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld buttons · Source: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 个按键 · 来源：%@" } }
+      }
+    },
+    "keymap.source.playCover" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "PlayCover" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "PlayCover" } }
+      }
+    },
+    "keymap.source.striker" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Striker" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Striker" } }
+      }
+    },
+    "keymap.source.unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未知" } }
+      }
+    },
+    "keymap.created %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Created: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已新建：%@" } }
+      }
+    },
+    "keymap.imported %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Imported: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已导入：%@" } }
+      }
+    },
+    "keymap.deleted %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deleted: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已删除：%@" } }
+      }
+    },
+    "keymap.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scheme saved" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "方案已保存" } }
+      }
+    },
+    "keymap.needTarget.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a target app first" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请先选择目标应用" } }
+      }
+    },
+    "compat.route" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Inject Route" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "技术路线" } }
+      }
+    },
+    "compat.route.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unsupported routes are disabled based on this Mac’s capabilities." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不支持的路线会根据本机能力自动禁用。" } }
+      }
+    },
+    "compat.test" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Test Click" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "测试点击" } }
+      }
+    },
+    "compat.test.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clicks the center of the frontmost window using the selected route." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用当前技术路线，在前台窗口中心模拟点击。" } }
+      }
+    },
+    "compat.test.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No test run yet" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚未测试" } }
+      }
+    },
+    "compat.system" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "系统信息" } }
+      }
+    },
+    "compat.system.os" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "macOS" } }
+      }
+    },
+    "compat.system.sandbox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "App Sandbox" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "App Sandbox" } }
+      }
+    },
+    "compat.on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "On" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开" } }
+      }
+    },
+    "compat.off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Off" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关" } }
+      }
+    },
+    "compat.permissions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "权限信息" } }
+      }
+    },
+    "compat.permissions.ax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "辅助功能" } }
+      }
+    },
+    "compat.permissions.tap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Event Tap" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "事件监听" } }
+      }
+    },
+    "compat.permissions.refresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "刷新" } }
+      }
+    },
+    "compat.api" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "API" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "API 信息" } }
+      }
+    },
+    "compat.api.skylight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight SLEventPostToPid" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight SLEventPostToPid" } }
+      }
+    },
+    "compat.api.authMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight Auth Message" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight Auth Message" } }
+      }
+    },
+    "compat.available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Available" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "可用" } }
+      }
+    },
+    "compat.unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不可用" } }
+      }
+    },
+    "compat.advanced" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Advanced" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高级" } }
+      }
+    },
+    "compat.advanced.mouseMoved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HID: Prepend mouseMoved" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "HID：前置 mouseMoved" } }
+      }
+    },
+    "compat.advanced.warp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "HID: Restore Cursor" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "HID：恢复光标位置" } }
+      }
+    },
+    "inject.mode.cascade" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Automatic (Recommended)" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自动（推荐）" } }
+      }
+    },
+    "inject.mode.postToPid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Post to Process" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "按进程投递" } }
+      }
+    },
+    "inject.mode.skyLight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "SkyLight" } }
+      }
+    },
+    "inject.mode.hidTap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Global HID" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全局 HID" } }
+      }
+    },
+    "about.version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "版本" } }
+      }
+    },
+    "about.checkUpdate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check for Updates" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "检查更新" } }
+      }
+    },
+    "about.comingSoon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Coming soon" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "即将推出" } }
+      }
+    },
+    "picker.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Target App" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择目标应用" } }
+      }
+    },
+    "picker.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Selecting a row highlights the target window for confirmation." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "点击列表项时，目标窗口会显示半透明浮层以便确认。" } }
+      }
+    },
+    "picker.search" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by name or bundle ID" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索名称或 bundle id" } }
+      }
+    },
+    "picker.current" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前" } }
+      }
+    },
+    "picker.preview %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "预览：%@" } }
+      }
+    },
+    "picker.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+      }
+    },
+    "picker.bind" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bind Selected" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "绑定所选" } }
+      }
+    },
+    "yes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Yes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "是" } }
+      }
+    },
+    "no" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "否" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

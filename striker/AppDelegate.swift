@@ -1,18 +1,20 @@
 import Cocoa
+import Combine
 import SwiftUI
 import InputRuntime
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private(set) var runtime: InputRuntime?
-    private var statusItem: NSStatusItem?
+    private let statusItemController = StatusItemController()
     private var settingsWindow: NSWindow?
     private var overlayWindow: NSWindow?
+    private var isSettingsVisible = false
+    private var cancellables = Set<AnyCancellable>()
 
-    private static let settingsWidth: CGFloat = 460
+    private static let settingsWidth: CGFloat = SettingsTabViewController.contentWidth
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        // Hide Dock icon before the app finishes launching.
         NSApp.setActivationPolicy(.accessory)
     }
 
@@ -20,72 +22,69 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let runtime = InputRuntime()
         self.runtime = runtime
 
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = item.button {
-            button.image = NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Striker")
+        statusItemController.onOpenSettings = { [weak self] in
+            self?.openSettings()
         }
-        let menu = NSMenu()
-        menu.delegate = self
-        item.menu = menu
-        statusItem = item
+        statusItemController.attach(runtime: runtime)
+
+        runtime.$showMenuBarIcon
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshActivationPolicy()
+            }
+            .store(in: &cancellables)
 
         runtime.startIfNeeded()
+        refreshActivationPolicy()
 
         setupOverlayWindow()
         NotificationCenter.default.addObserver(self, selector: #selector(handleShowClickOverlay), name: .showClickOverlay, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleHideClickOverlay), name: .hideClickOverlay, object: nil)
     }
 
-    // MARK: - Tray menu
-
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-
-        let enabled = runtime?.isEnabled ?? false
-        let toggle = NSMenuItem(
-            title: "启用",
-            action: #selector(toggleEnabled),
-            keyEquivalent: ""
-        )
-        toggle.state = enabled ? .on : .off
-        menu.addItem(toggle)
-
-        menu.addItem(NSMenuItem(title: "设置", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApplication.shared.terminate(_:)), keyEquivalent: "q"))
-    }
-
-    @objc func toggleEnabled() {
-        runtime?.isEnabled.toggle()
-    }
-
     @objc func openSettings() {
         guard let runtime else { return }
 
         if settingsWindow == nil {
-            let root = ContentView().environmentObject(runtime)
-            let hosting = NSHostingController(rootView: root)
-            hosting.view.frame.size = NSSize(width: Self.settingsWidth, height: 560)
+            let tabs = SettingsTabViewController(runtime: runtime)
+            let initialHeight = SettingsTabViewController.Pane.general.contentHeight
 
+            // Preference window: titled + closable. Width fixed; height follows selected pane.
             let window = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: Self.settingsWidth, height: 560),
-                styleMask: [.titled, .closable, .resizable],
+                contentRect: NSRect(x: 0, y: 0, width: Self.settingsWidth, height: initialHeight),
+                styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
-            window.title = "Striker 设置"
-            window.contentViewController = hosting
+            window.title = String(localized: "settings.window.title")
+            // `.toolbar` tab style auto-adopts `.preference` toolbar (Safari / Calendar Settings).
+            window.contentViewController = tabs
             window.isReleasedWhenClosed = false
             window.hidesOnDeactivate = false
-            // Fixed width; height remains resizable.
-            window.contentMinSize = NSSize(width: Self.settingsWidth, height: 400)
-            window.contentMaxSize = NSSize(width: Self.settingsWidth, height: 10_000)
+            window.delegate = self
             window.center()
             settingsWindow = window
         }
 
+        isSettingsVisible = true
+        refreshActivationPolicy()
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Dock while Settings is open (or menu-bar icon is hidden); otherwise menu-bar agent.
+    private func refreshActivationPolicy() {
+        let showMenuBarIcon = runtime?.showMenuBarIcon ?? true
+        let showDock = isSettingsVisible || !showMenuBarIcon
+        NSApp.setActivationPolicy(showDock ? .regular : .accessory)
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === settingsWindow else { return }
+        isSettingsVisible = false
+        refreshActivationPolicy()
     }
 
     // MARK: - Click overlay

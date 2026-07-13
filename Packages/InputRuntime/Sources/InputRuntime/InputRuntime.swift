@@ -12,7 +12,7 @@ public final class InputRuntime: ObservableObject {
     @Published public var keymap: CanonicalKeymap = CanonicalKeymap()
     @Published public var schemes: [KeymapSchemeMeta] = []
     @Published public var activeSchemeID: UUID?
-    @Published public var injectMode: InjectMode = .postToPid {
+    @Published public var injectMode: InjectMode = .cascade {
         didSet { persistSettings() }
     }
     @Published public var preferMouseMovedBeforeHID: Bool = true {
@@ -24,10 +24,15 @@ public final class InputRuntime: ObservableObject {
     @Published public var isEnabled: Bool = true {
         didSet { persistSettings() }
     }
+    @Published public var showMenuBarIcon: Bool = true {
+        didSet { persistSettings() }
+    }
     @Published public var isEditing: Bool = false
     @Published public var isListening: Bool = false
+    @Published public var capability: CapabilityReport?
     @Published public var capabilitySummary: String = ""
-    @Published public var lastInjectSummary: String = "(none yet)"
+    @Published public var lastInjectSummary: String = ""
+    @Published public var lastInjectPosted: Bool?
     @Published public var keymapSummary: String = "(empty)"
 
     public var onEditorKeyDown: ((UInt16, String) -> Void)?
@@ -39,6 +44,7 @@ public final class InputRuntime: ObservableObject {
     private let settingsStore = AppSettingsStore()
     private var didStart = false
     private var isRestoringSettings = false
+    private var pendingInjectModeRaw: String?
 
     public init() {
         DispatchQueue.main.async { [weak self] in
@@ -54,8 +60,7 @@ public final class InputRuntime: ObservableObject {
         guard !didStart else { return }
         didStart = true
         restoreSettings()
-        let report = CapabilityProbe.run(promptAccessibility: true)
-        capabilitySummary = report.summaryLine
+        applyCapability(CapabilityProbe.run(promptAccessibility: true))
         startMonitoring()
     }
 
@@ -121,7 +126,7 @@ public final class InputRuntime: ObservableObject {
 
     /// Create a blank Striker keymap scheme for the current target and persist it.
     @discardableResult
-    public func createNewKeymap(name: String = "未命名方案") -> Bool {
+    public func createNewKeymap(name: String = "Untitled") -> Bool {
         guard let targetBundleID else {
             InjectLogger.log(.target, "cannot create keymap — no target")
             return false
@@ -199,7 +204,7 @@ public final class InputRuntime: ObservableObject {
             return
         }
         let name = suggestedName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? "导入的方案"
+            ?? "Imported"
         do {
             let meta = try store.create(keymap: map, bundleID: targetBundleID, name: name)
             activeSchemeID = meta.id
@@ -234,34 +239,37 @@ public final class InputRuntime: ObservableObject {
     }
 
     public func refreshCapability() {
-        let report = CapabilityProbe.run(promptAccessibility: false)
-        capabilitySummary = report.summaryLine
-        didStart = false
-        startIfNeeded()
+        applyCapability(CapabilityProbe.run(promptAccessibility: false))
+        if !isListening {
+            startMonitoring()
+        }
     }
 
     public func fireClick(relativeX: Double, relativeY: Double) {
         syncInjectorOptions()
         guard let target = TargetResolver.resolveFrontmost(relativeX: relativeX, relativeY: relativeY) else {
             lastInjectSummary = "resolve failed"
+            lastInjectPosted = false
             return
         }
         NotificationCenter.default.post(name: .showClickOverlay, object: target.clickPointAppKit)
         let result = injector.injectClick(mode: injectMode, target: target)
         lastInjectSummary = result.summary
+        lastInjectPosted = result.posted
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             NotificationCenter.default.post(name: .hideClickOverlay, object: nil)
         }
     }
 
-    public func fireEscape() {
-        syncInjectorOptions()
-        guard let app = NSWorkspace.shared.frontmostApplication else {
-            lastInjectSummary = "no frontmost app for escape"
-            return
+    private func applyCapability(_ report: CapabilityReport) {
+        capability = report
+        capabilitySummary = report.summaryLine
+        let raw = pendingInjectModeRaw ?? injectMode.rawValue
+        let resolved = InjectMode.resolvedProductMode(raw: raw, report: report)
+        pendingInjectModeRaw = nil
+        if injectMode != resolved {
+            injectMode = resolved
         }
-        let result = injector.injectEscape(pid: app.processIdentifier)
-        lastInjectSummary = result.summary
     }
 
     private func handleKeyEvent(_ event: NSEvent, source: String) {
@@ -339,9 +347,9 @@ public final class InputRuntime: ObservableObject {
         isEnabled = settings.isEnabled
         preferMouseMovedBeforeHID = settings.preferMouseMovedBeforeHID
         restoreCursorAfterHID = settings.restoreCursorAfterHID
-        if let mode = InjectMode(rawValue: settings.injectModeRaw) {
-            injectMode = mode
-        }
+        showMenuBarIcon = settings.showMenuBarIcon
+        pendingInjectModeRaw = settings.injectModeRaw
+        injectMode = InjectMode.resolvedProductMode(raw: settings.injectModeRaw, report: nil)
         if let bundleID = settings.lastTargetBundleID {
             bind(bundleID: bundleID, appName: settings.lastTargetAppName)
         }
@@ -355,7 +363,8 @@ public final class InputRuntime: ObservableObject {
             isEnabled: isEnabled,
             injectModeRaw: injectMode.rawValue,
             preferMouseMovedBeforeHID: preferMouseMovedBeforeHID,
-            restoreCursorAfterHID: restoreCursorAfterHID
+            restoreCursorAfterHID: restoreCursorAfterHID,
+            showMenuBarIcon: showMenuBarIcon
         )
         do {
             try settingsStore.save(settings)

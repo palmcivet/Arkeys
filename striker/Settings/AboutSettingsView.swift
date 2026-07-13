@@ -18,13 +18,9 @@ struct AboutSettingsView: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
-            }
 
-            Section {
                 Button("about.checkUpdate") {}
                     .disabled(true)
-            } footer: {
-                SettingsFooter("about.comingSoon")
             }
         }
         .formStyle(.grouped)

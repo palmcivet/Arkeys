@@ -8,21 +8,36 @@ struct CompatibilitySettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("compat.route", selection: $runtime.injectMode) {
-                    ForEach(InjectMode.productCases) { mode in
-                        Text(localizedName(for: mode))
-                            .tag(mode)
+                // Menu (not Picker.menu): macOS menu pickers omit `.disabled` options;
+                // Menu buttons stay visible and gray out when unavailable.
+                LabeledContent("compat.route") {
+                    Menu {
+                        ForEach(InjectMode.productCases) { mode in
+                            Button {
+                                runtime.injectMode = mode
+                            } label: {
+                                if runtime.injectMode == mode {
+                                    Label(localizedName(for: mode), systemImage: "checkmark")
+                                } else {
+                                    Text(localizedName(for: mode))
+                                }
+                            }
                             .disabled(!isAvailable(mode))
+                        }
+                    } label: {
+                        Text(localizedName(for: runtime.injectMode))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-                .pickerStyle(.menu)
             } footer: {
                 SettingsFooter("compat.route.footer")
             }
 
             Section {
                 Button("compat.test") {
-                    runtime.fireClick(relativeX: 0.5, relativeY: 0.5)
+                    runtime.fireTestClick(relativeX: 0.5, relativeY: 0.5)
                 }
                 testResultLabel
             } footer: {
@@ -47,8 +62,14 @@ struct CompatibilitySettingsView: View {
                 LabeledContent("compat.permissions.tap") {
                     statusText(runtime.capability?.eventTapCreatable)
                 }
-                Button("compat.permissions.refresh") {
-                    runtime.refreshCapability()
+                HStack {
+                    Button("compat.permissions.openSettings") {
+                        runtime.openAccessibilitySettings()
+                    }
+                    .disabled(runtime.capability?.accessibilityTrusted == true)
+                    Button("compat.permissions.refresh") {
+                        runtime.refreshCapability()
+                    }
                 }
             }
 

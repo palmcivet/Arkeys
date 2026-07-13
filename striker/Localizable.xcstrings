@@ -113,6 +113,27 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示菜单栏图标" } }
       }
     },
+    "general.language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "语言" } }
+      }
+    },
+    "general.language.openSystemSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language Settings…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开语言设置…" } }
+      }
+    },
+    "general.language.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System Settings → Language & Region → Applications, then relaunch." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在「系统设置 → 语言与地区 → 应用」中添加，然后重新打开。" } }
+      }
+    },
     "keymap.current" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -232,6 +253,34 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "方案已保存" } }
       }
     },
+    "keymap.discard.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard keymap changes?" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃未保存的更改？" } }
+      }
+    },
+    "keymap.discard.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You have unsaved edits. Discarding will lose them." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前有未保存的编辑，放弃后将无法恢复。" } }
+      }
+    },
+    "keymap.discard.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃" } }
+      }
+    },
+    "keymap.discard.keepEditing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep Editing" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续编辑" } }
+      }
+    },
     "keymap.needTarget.action" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -263,8 +312,8 @@
     "compat.test.footer" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clicks the center of the frontmost window using the selected route." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用当前技术路线，在前台窗口中心模拟点击。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clicks the center of the previous window using the selected route." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用当前技术路线，在上一个窗口中心模拟点击。" } }
       }
     },
     "compat.test.none" : {
@@ -335,6 +384,13 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "刷新" } }
+      }
+    },
+    "compat.permissions.openSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开系统设置" } }
       }
     },
     "compat.api" : {
@@ -433,13 +489,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Check for Updates" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "检查更新" } }
-      }
-    },
-    "about.comingSoon" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Coming soon" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "即将推出" } }
       }
     },
     "picker.title" : {

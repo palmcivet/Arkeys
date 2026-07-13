@@ -178,20 +178,32 @@ public final class EventInjector: @unchecked Sendable {
         var steps: [String] = []
 
         let pidResult = postToPidClick(target: target)
-        steps.append("postToPid=\(pidResult.0 ? "ok" : "fail"):\(pidResult.1)")
+        steps.append(cascadeStep("postToPid", pidResult))
         if pidResult.0 {
             return finishCascade(steps: steps, posted: true, before: before, start: start)
         }
 
         let sky = skyLightClick(target: target)
-        steps.append("skyLight=\(sky.0 ? "ok" : "fail"):\(sky.1)")
+        steps.append(cascadeStep("skyLight", sky))
         if sky.0 {
             return finishCascade(steps: steps, posted: true, before: before, start: start)
         }
 
         let hid = hidTapClick(target: target, cursorBefore: before)
-        steps.append("hidTap=\(hid.0 ? "ok" : "fail"):\(hid.1)")
+        steps.append(cascadeStep("hidTap", hid))
         return finishCascade(steps: steps, posted: hid.0, before: before, start: start)
+    }
+
+    /// Cascade step log: `postToPid=ok` or `postToPid=fail(eventCreateFailed)`.
+    /// Avoids redundant `postToPid=ok:postToPid` when the detail string just repeats the route name.
+    private func cascadeStep(_ name: String, _ result: (Bool, String)) -> String {
+        if result.0 {
+            if result.1 == name || result.1.isEmpty {
+                return "\(name)=ok"
+            }
+            return "\(name)=ok(\(result.1))"
+        }
+        return "\(name)=fail(\(result.1))"
     }
 
     private func finishCascade(steps: [String], posted: Bool, before: CGPoint, start: CFAbsoluteTime) -> InjectResult {

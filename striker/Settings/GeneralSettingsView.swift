@@ -16,6 +16,18 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                LabeledContent("general.language") {
+                    Text(currentLanguageDisplayName)
+                        .foregroundStyle(.secondary)
+                }
+                Button("general.language.openSystemSettings") {
+                    openSystemLanguageSettings()
+                }
+            } footer: {
+                SettingsFooter("general.language.footer")
+            }
+
+            Section {
                 LabeledContent("general.target") {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(runtime.targetBundleID == nil
@@ -54,6 +66,30 @@ struct GeneralSettingsView: View {
                 runtime.bind(bundleID: app.bundleIdentifier, appName: app.name)
                 isPickingApp = false
                 highlight.hide()
+            }
+        }
+    }
+
+    /// Language currently resolved for this process (system or per-app override).
+    private var currentLanguageDisplayName: String {
+        let id = Bundle.main.preferredLocalizations.first ?? Locale.current.identifier
+        let locale = Locale(identifier: id)
+        if let code = locale.language.languageCode?.identifier,
+           let name = locale.localizedString(forLanguageCode: code) {
+            return name
+        }
+        return Locale.current.localizedString(forLanguageCode: id) ?? id
+    }
+
+    private func openSystemLanguageSettings() {
+        // Language & Region in System Settings (macOS Ventura+).
+        let candidates = [
+            "x-apple.systempreferences:com.apple.Localization-Settings.extension",
+            "x-apple.systempreferences:com.apple.Localization",
+        ]
+        for candidate in candidates {
+            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+                return
             }
         }
     }

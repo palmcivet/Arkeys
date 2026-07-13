@@ -6,10 +6,12 @@ struct ClickOverlayView: View {
             Circle()
                 .fill(Color.red.opacity(0.5))
                 .frame(width: 20, height: 20)
+            // strokeBorder draws inside the path so the ring is not clipped by the hosting view.
             Circle()
-                .stroke(Color.red, lineWidth: 2)
+                .strokeBorder(Color.red, lineWidth: 2)
                 .frame(width: 30, height: 30)
         }
+        .frame(width: 50, height: 50)
     }
 }
 

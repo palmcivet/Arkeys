@@ -7,6 +7,9 @@ import Targeting
 
 @MainActor
 public final class KeymapEditorController: ObservableObject {
+    /// Carbon `kVK_Escape`.
+    public static let escapeKeyCode: UInt16 = 53
+
     @Published public var keymap: CanonicalKeymap
     @Published public var selectedID: UUID?
     @Published public var isActive: Bool = false
@@ -16,8 +19,14 @@ public final class KeymapEditorController: ObservableObject {
     private var overlayWindow: NSWindow?
     private var followTimer: Timer?
     private var targetBundleID: String?
+    private var baselineKeymap: CanonicalKeymap = CanonicalKeymap()
+    private var isPromptingDiscard = false
     public var onFinished: ((CanonicalKeymap) -> Void)?
     public var onCancelled: (() -> Void)?
+
+    public var hasUnsavedChanges: Bool {
+        keymap != baselineKeymap
+    }
 
     public init(keymap: CanonicalKeymap = CanonicalKeymap()) {
         self.keymap = keymap
@@ -26,6 +35,8 @@ public final class KeymapEditorController: ObservableObject {
     public func start(targetBundleID: String, keymap: CanonicalKeymap) {
         self.targetBundleID = targetBundleID
         self.keymap = keymap
+        self.baselineKeymap = keymap
+        self.selectedID = nil
         self.isActive = true
         ensureOverlay()
         startFollowing()
@@ -47,6 +58,40 @@ public final class KeymapEditorController: ObservableObject {
         isActive = false
         onCancelled?()
         InjectLog.editor("editor cancelled")
+    }
+
+    /// Escape / Cmd+.: discard immediately if clean; confirm when there are unsaved edits.
+    /// Explicit Cancel button calls `cancel()` directly — no second prompt (intentional dismiss).
+    public func requestCancel() {
+        guard isActive else { return }
+        guard hasUnsavedChanges else {
+            cancel()
+            return
+        }
+        guard !isPromptingDiscard else { return }
+        isPromptingDiscard = true
+
+        let alert = NSAlert()
+        alert.messageText = String(localized: "keymap.discard.title", bundle: .main)
+        alert.informativeText = String(localized: "keymap.discard.message", bundle: .main)
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "keymap.discard.confirm", bundle: .main))
+        alert.addButton(withTitle: String(localized: "keymap.discard.keepEditing", bundle: .main))
+
+        let response = alert.runModal()
+        isPromptingDiscard = false
+        if response == .alertFirstButtonReturn {
+            cancel()
+        }
+    }
+
+    /// Key events while editing: Escape cancels (with dirty check); other keys bind.
+    public func handleKeyDown(keyCode: UInt16, name: String) {
+        if keyCode == Self.escapeKeyCode {
+            requestCancel()
+            return
+        }
+        bindKey(keyCode: keyCode, name: name)
     }
 
     public func bindKey(keyCode: UInt16, name: String) {
@@ -96,12 +141,13 @@ public final class KeymapEditorController: ObservableObject {
 
     private func ensureOverlay() {
         if overlayWindow == nil {
-            let window = NSWindow(
+            let window = EditorOverlayWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
                 styleMask: .borderless,
                 backing: .buffered,
                 defer: false
             )
+            window.editor = self
             window.isOpaque = false
             window.backgroundColor = .clear
             window.level = .floating
@@ -146,6 +192,15 @@ public final class KeymapEditorController: ObservableObject {
 private enum InjectLog {
     static func editor(_ message: String) {
         print("[Striker][editor] \(message)")
+    }
+}
+
+/// Borderless editor surface: Esc / Cmd+. → discard confirm, not silent close.
+private final class EditorOverlayWindow: NSWindow {
+    weak var editor: KeymapEditorController?
+
+    override func cancelOperation(_ sender: Any?) {
+        editor?.requestCancel()
     }
 }
 

@@ -15,6 +15,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private static let settingsWidth: CGFloat = SettingsTabViewController.contentWidth
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // Clear any leftover in-app AppleLanguages override from earlier builds so
+        // System Settings → Language & Region → Applications remains authoritative.
+        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
         NSApp.setActivationPolicy(.accessory)
     }
 
@@ -50,7 +53,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let initialHeight = SettingsTabViewController.Pane.general.contentHeight
 
             // Preference window: titled + closable. Width fixed; height follows selected pane.
-            let window = NSPanel(
+            // Use a panel subclass that ignores Esc — system Settings / Safari prefs do not
+            // dismiss on Escape (that behavior is for sheets and modal alerts).
+            let window = PreferencePanel(
                 contentRect: NSRect(x: 0, y: 0, width: Self.settingsWidth, height: initialHeight),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
@@ -126,5 +131,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func hideOverlay() {
         overlayWindow?.orderOut(nil)
+    }
+}
+
+/// Preference window that does not close when the user presses Escape.
+private final class PreferencePanel: NSPanel {
+    override func cancelOperation(_ sender: Any?) {
+        // Intentionally empty. Default NSPanel dismisses on Esc; preference windows do not.
     }
 }

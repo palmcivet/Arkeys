@@ -45,6 +45,9 @@ public final class InputRuntime: ObservableObject {
     private var didStart = false
     private var isRestoringSettings = false
     private var pendingInjectModeRaw: String?
+    /// Last non-Striker app that was frontmost — used by Compatibility Test Click.
+    private var previousFrontmostApp: NSRunningApplication?
+    private var frontmostObserver: NSObjectProtocol?
 
     public init() {
         DispatchQueue.main.async { [weak self] in
@@ -53,6 +56,9 @@ public final class InputRuntime: ObservableObject {
     }
 
     deinit {
+        if let frontmostObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(frontmostObserver)
+        }
         // Monitors removed best-effort; NSEvent APIs are main-thread.
     }
 
@@ -62,6 +68,7 @@ public final class InputRuntime: ObservableObject {
         restoreSettings()
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         startMonitoring()
+        startTrackingFrontmost()
     }
 
     public func startMonitoring() {
@@ -75,6 +82,12 @@ public final class InputRuntime: ObservableObject {
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             Task { @MainActor in
                 self?.handleKeyEvent(event, source: "local")
+            }
+            // While editing, swallow Escape so AppKit doesn't also treat it as cancel /
+            // so we don't bind Escape as a hotkey and then dismiss in the same press.
+            // 53 == Carbon kVK_Escape (same as KeymapEditorController.escapeKeyCode).
+            if event.keyCode == 53, self?.isEditing == true {
+                return nil
             }
             return event
         }
@@ -246,19 +259,91 @@ public final class InputRuntime: ObservableObject {
     }
 
     public func fireClick(relativeX: Double, relativeY: Double) {
-        syncInjectorOptions()
         guard let target = TargetResolver.resolveFrontmost(relativeX: relativeX, relativeY: relativeY) else {
-            lastInjectSummary = "resolve failed"
+            lastInjectSummary = "app=? resolve failed"
             lastInjectPosted = false
             return
         }
+        performClick(on: target)
+    }
+
+    /// Compatibility Test Click: inject into the previous (non-Striker) frontmost window.
+    /// Settings is frontmost when the button is pressed, so `resolveFrontmost` would hit Striker.
+    public func fireTestClick(relativeX: Double, relativeY: Double) {
+        let app = usablePreviousFrontmost() ?? frontmostExcludingSelf()
+        guard let app else {
+            lastInjectSummary = "app=? resolve failed (no previous window)"
+            lastInjectPosted = false
+            return
+        }
+        let appName = app.localizedName ?? app.bundleIdentifier ?? "?"
+        guard let target = TargetResolver.resolve(app: app, relativeX: relativeX, relativeY: relativeY) else {
+            lastInjectSummary = "app=\(appName) resolve failed (no window)"
+            lastInjectPosted = false
+            return
+        }
+        performClick(on: target)
+    }
+
+    public func openAccessibilitySettings() {
+        let candidates = [
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+        ]
+        for candidate in candidates {
+            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+                return
+            }
+        }
+    }
+
+    private func performClick(on target: InjectionTarget) {
+        syncInjectorOptions()
         NotificationCenter.default.post(name: .showClickOverlay, object: target.clickPointAppKit)
         let result = injector.injectClick(mode: injectMode, target: target)
-        lastInjectSummary = result.summary
+        lastInjectSummary = "app=\(target.appName) \(result.summary)"
         lastInjectPosted = result.posted
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             NotificationCenter.default.post(name: .hideClickOverlay, object: nil)
         }
+    }
+
+    private func startTrackingFrontmost() {
+        rememberFrontmostIfExternal(NSWorkspace.shared.frontmostApplication)
+        frontmostObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            Task { @MainActor in
+                self?.rememberFrontmostIfExternal(app)
+            }
+        }
+    }
+
+    private func rememberFrontmostIfExternal(_ app: NSRunningApplication?) {
+        guard let app, !isSelf(app) else { return }
+        previousFrontmostApp = app
+    }
+
+    private func usablePreviousFrontmost() -> NSRunningApplication? {
+        guard let app = previousFrontmostApp, !app.isTerminated else {
+            previousFrontmostApp = nil
+            return nil
+        }
+        return app
+    }
+
+    private func frontmostExcludingSelf() -> NSRunningApplication? {
+        guard let front = NSWorkspace.shared.frontmostApplication, !isSelf(front) else {
+            return nil
+        }
+        return front
+    }
+
+    private func isSelf(_ app: NSRunningApplication) -> Bool {
+        app.bundleIdentifier == Bundle.main.bundleIdentifier
     }
 
     private func applyCapability(_ report: CapabilityReport) {

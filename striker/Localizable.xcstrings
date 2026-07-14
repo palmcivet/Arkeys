@@ -302,6 +302,13 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不支持的路线会根据本机能力自动禁用。" } }
       }
     },
+    "compat.hid.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Only affects Global HID clicks." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "仅影响全局 HID 点击。" } }
+      }
+    },
     "compat.test" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -386,11 +393,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "刷新" } }
       }
     },
-    "compat.permissions.openSettings" : {
+    "compat.permissions.grantPermission" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开系统设置" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Grant Permission" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "授予权限" } }
       }
     },
     "compat.api" : {

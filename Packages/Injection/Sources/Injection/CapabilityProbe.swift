@@ -21,7 +21,9 @@ public enum CapabilityProbe {
 
         let axTrusted: Bool
         if promptAccessibility {
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
+            // Registers this process with TCC and may present the system
+            // "Accessibility Access" dialog. Opening System Settings alone does not.
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             axTrusted = AXIsProcessTrustedWithOptions(options)
         } else {
             axTrusted = AXIsProcessTrusted()

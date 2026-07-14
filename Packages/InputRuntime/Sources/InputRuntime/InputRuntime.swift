@@ -285,7 +285,17 @@ public final class InputRuntime: ObservableObject {
         performClick(on: target)
     }
 
+    /// Prompt TCC (system Accessibility Access dialog when eligible), then open the
+    /// Accessibility privacy pane so the user can toggle Striker if they already denied.
     public func openAccessibilitySettings() {
+        applyCapability(CapabilityProbe.run(promptAccessibility: true))
+        openAccessibilityPrivacyPane()
+        if !isListening {
+            startMonitoring()
+        }
+    }
+
+    private func openAccessibilityPrivacyPane() {
         let candidates = [
             "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",

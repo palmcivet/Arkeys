@@ -36,15 +36,26 @@ struct CompatibilitySettingsView: View {
             }
 
             Section {
-                Button("compat.test") {
-                    runtime.fireTestClick(relativeX: 0.5, relativeY: 0.5)
-                }
-                testResultLabel
+                Toggle("compat.advanced.mouseMoved", isOn: $runtime.preferMouseMovedBeforeHID)
+                Toggle("compat.advanced.warp", isOn: $runtime.restoreCursorAfterHID)
             } footer: {
-                SettingsFooter("compat.test.footer")
+                SettingsFooter("compat.hid.footer")
             }
+            .disabled(runtime.injectMode != .hidTap)
 
-            Section("compat.system") {
+            Section {
+                LabeledContent("compat.permissions.ax") {
+                    statusText(runtime.capability?.accessibilityTrusted)
+                }
+                LabeledContent("compat.permissions.tap") {
+                    statusText(runtime.capability?.eventTapCreatable)
+                }
+                LabeledContent("compat.api.skylight") {
+                    availabilityText(runtime.capability?.skyLightPostToPid)
+                }
+                LabeledContent("compat.api.authMessage") {
+                    availabilityText(runtime.capability?.authMessage)
+                }
                 LabeledContent("compat.system.os") {
                     Text(runtime.capability?.osVersion ?? "—")
                         .foregroundStyle(.secondary)
@@ -53,17 +64,8 @@ struct CompatibilitySettingsView: View {
                     Text(boolLabel(runtime.capability?.sandboxEnabled))
                         .foregroundStyle(.secondary)
                 }
-            }
-
-            Section("compat.permissions") {
-                LabeledContent("compat.permissions.ax") {
-                    statusText(runtime.capability?.accessibilityTrusted)
-                }
-                LabeledContent("compat.permissions.tap") {
-                    statusText(runtime.capability?.eventTapCreatable)
-                }
                 HStack {
-                    Button("compat.permissions.openSettings") {
+                    Button("compat.permissions.grantPermission") {
                         runtime.openAccessibilitySettings()
                     }
                     .disabled(runtime.capability?.accessibilityTrusted == true)
@@ -73,20 +75,13 @@ struct CompatibilitySettingsView: View {
                 }
             }
 
-            Section("compat.api") {
-                LabeledContent("compat.api.skylight") {
-                    availabilityText(runtime.capability?.skyLightPostToPid)
-                }
-                LabeledContent("compat.api.authMessage") {
-                    availabilityText(runtime.capability?.authMessage)
-                }
-            }
-
             Section {
-                DisclosureGroup("compat.advanced") {
-                    Toggle("compat.advanced.mouseMoved", isOn: $runtime.preferMouseMovedBeforeHID)
-                    Toggle("compat.advanced.warp", isOn: $runtime.restoreCursorAfterHID)
+                Button("compat.test") {
+                    runtime.fireTestClick(relativeX: 0.5, relativeY: 0.5)
                 }
+                testResultLabel
+            } footer: {
+                SettingsFooter("compat.test.footer")
             }
         }
         .formStyle(.grouped)

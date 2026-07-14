@@ -33,7 +33,6 @@ public final class SkyLightBridge: @unchecked Sendable {
             InjectLogger.log(.inject, "skyLightUnavailable symbol=SLEventPostToPid")
             return false
         }
-        _ = hasAuthMessage
         postToPidFn(event, pid)
         return true
     }

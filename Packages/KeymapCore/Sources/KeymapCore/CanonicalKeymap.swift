@@ -170,13 +170,6 @@ public struct CanonicalKeymap: Codable, Hashable, Sendable {
             return false
         }
     }
-
-    public var summaryLine: String {
-        let buttons = runnableButtons.count
-        let others = elements.count - buttons
-        let hint = targetHint ?? "(none)"
-        return "target=\(hint) buttons=\(buttons) other=\(others) source=\(source)"
-    }
 }
 
 public extension CanonicalKeymap {

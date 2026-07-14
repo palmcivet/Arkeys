@@ -115,7 +115,6 @@ struct CompatibilitySettingsView: View {
         case .postToPid: return String(localized: "inject.mode.postToPid")
         case .skyLight: return String(localized: "inject.mode.skyLight")
         case .hidTap: return String(localized: "inject.mode.hidTap")
-        case .sessionTap: return mode.displayName
         }
     }
 

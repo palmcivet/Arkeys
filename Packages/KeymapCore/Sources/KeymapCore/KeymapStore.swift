@@ -186,11 +186,6 @@ public final class KeymapStore: @unchecked Sendable {
         try saveManifest(manifest, bundleID: bundleID)
     }
 
-    /// Remove all schemes for a target.
-    public func deleteAll(bundleID: String) {
-        try? FileManager.default.removeItem(at: targetDirectory(forBundleID: bundleID))
-    }
-
     // MARK: - Private
 
     private func ensureTargetDirectory(bundleID: String) throws {

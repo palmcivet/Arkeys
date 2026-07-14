@@ -28,12 +28,9 @@ public final class InputRuntime: ObservableObject {
         didSet { persistSettings() }
     }
     @Published public var isEditing: Bool = false
-    @Published public var isListening: Bool = false
     @Published public var capability: CapabilityReport?
-    @Published public var capabilitySummary: String = ""
     @Published public var lastInjectSummary: String = ""
     @Published public var lastInjectPosted: Bool?
-    @Published public var keymapSummary: String = "(empty)"
 
     public var onEditorKeyDown: ((UInt16, String) -> Void)?
 
@@ -92,7 +89,6 @@ public final class InputRuntime: ObservableObject {
             return event
         }
 
-        isListening = (globalKeyMonitor != nil)
         if globalKeyMonitor == nil {
             InjectLogger.log(.capability, "global key monitor FAILED — enable Accessibility")
         } else {
@@ -109,7 +105,6 @@ public final class InputRuntime: ObservableObject {
             NSEvent.removeMonitor(localKeyMonitor)
             self.localKeyMonitor = nil
         }
-        isListening = false
     }
 
     /// Bind a specific running app as the injection target (focus gate).
@@ -150,7 +145,6 @@ public final class InputRuntime: ObservableObject {
             activeSchemeID = meta.id
             keymap = blank
             refreshSchemesList()
-            refreshKeymapSummary()
             InjectLogger.log(.target, "created new empty keymap for \(targetBundleID)")
             return true
         } catch {
@@ -172,7 +166,6 @@ public final class InputRuntime: ObservableObject {
             if let loaded = store.load(bundleID: targetBundleID, schemeID: id) {
                 keymap = loaded
             }
-            refreshKeymapSummary()
             InjectLogger.log(.target, "selected scheme \(id.uuidString)")
         } catch {
             InjectLogger.log(.target, "select scheme failed: \(error.localizedDescription)")
@@ -196,7 +189,6 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.save(keymap, bundleID: targetBundleID, schemeID: activeSchemeID)
             refreshSchemesList()
-            refreshKeymapSummary()
             InjectLogger.log(.target, "saved keymap for \(targetBundleID) scheme=\(activeSchemeID)")
         } catch {
             InjectLogger.log(.target, "save failed: \(error.localizedDescription)")
@@ -223,7 +215,6 @@ public final class InputRuntime: ObservableObject {
             activeSchemeID = meta.id
             keymap = map
             refreshSchemesList()
-            refreshKeymapSummary()
             persistSettings()
         } catch {
             InjectLogger.log(.target, "import save failed: \(error.localizedDescription)")
@@ -235,7 +226,6 @@ public final class InputRuntime: ObservableObject {
         guard let targetBundleID else { return }
         guard let activeSchemeID else {
             keymap = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
-            refreshKeymapSummary()
             return
         }
         do {
@@ -247,13 +237,9 @@ public final class InputRuntime: ObservableObject {
         }
     }
 
-    public func clearKeymap() {
-        deleteActiveScheme()
-    }
-
     public func refreshCapability() {
         applyCapability(CapabilityProbe.run(promptAccessibility: false))
-        if !isListening {
+        if globalKeyMonitor == nil {
             startMonitoring()
         }
     }
@@ -290,7 +276,7 @@ public final class InputRuntime: ObservableObject {
     public func openAccessibilitySettings() {
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         openAccessibilityPrivacyPane()
-        if !isListening {
+        if globalKeyMonitor == nil {
             startMonitoring()
         }
     }
@@ -358,7 +344,6 @@ public final class InputRuntime: ObservableObject {
 
     private func applyCapability(_ report: CapabilityReport) {
         capability = report
-        capabilitySummary = report.summaryLine
         let raw = pendingInjectModeRaw ?? injectMode.rawValue
         let resolved = InjectMode.resolvedProductMode(raw: raw, report: report)
         pendingInjectModeRaw = nil
@@ -401,11 +386,6 @@ public final class InputRuntime: ObservableObject {
         injector.restoreCursorAfterHID = restoreCursorAfterHID
     }
 
-    private func refreshKeymapSummary() {
-        let schemeName = schemes.first(where: { $0.id == activeSchemeID })?.name ?? "(none)"
-        keymapSummary = "scheme=\(schemeName) \(keymap.summaryLine)"
-    }
-
     private func refreshSchemesList() {
         guard let targetBundleID else {
             schemes = []
@@ -421,7 +401,6 @@ public final class InputRuntime: ObservableObject {
             schemes = []
             activeSchemeID = nil
             keymap = CanonicalKeymap()
-            refreshKeymapSummary()
             return
         }
         refreshSchemesList()
@@ -432,7 +411,6 @@ public final class InputRuntime: ObservableObject {
             activeSchemeID = nil
             keymap = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
         }
-        refreshKeymapSummary()
     }
 
     private func restoreSettings() {

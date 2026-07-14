@@ -3,8 +3,7 @@ import AppKit
 import ApplicationServices
 import Targeting
 
-public enum InjectMode: String, CaseIterable, Identifiable, Sendable {
-    case sessionTap
+public enum InjectMode: String, Identifiable, Sendable {
     case postToPid
     case skyLight
     case hidTap
@@ -12,20 +11,8 @@ public enum InjectMode: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    /// User-facing inject routes (excludes PoC-only baselines).
     public static var productCases: [InjectMode] {
         [.cascade, .postToPid, .skyLight, .hidTap]
-    }
-
-    /// English name for logs only — UI localizes via app String Catalog.
-    public var displayName: String {
-        switch self {
-        case .sessionTap: return "sessionTap (baseline)"
-        case .postToPid: return "postToPid"
-        case .skyLight: return "skyLight"
-        case .hidTap: return "hidTap"
-        case .cascade: return "cascade"
-        }
     }
 
     public func isAvailable(given report: CapabilityReport) -> Bool {
@@ -34,7 +21,7 @@ public enum InjectMode: String, CaseIterable, Identifiable, Sendable {
             return report.accessibilityTrusted
         case .skyLight:
             return report.skyLightPostToPid
-        case .hidTap, .sessionTap:
+        case .hidTap:
             return report.eventTapCreatable
         case .cascade:
             return report.accessibilityTrusted
@@ -86,10 +73,6 @@ public final class EventInjector: @unchecked Sendable {
 
     public func injectClick(mode: InjectMode, target: InjectionTarget) -> InjectResult {
         switch mode {
-        case .sessionTap:
-            return runTimed(mode: mode) { before in
-                sessionTapClick(target: target, cursorBefore: before)
-            }
         case .postToPid:
             return runTimed(mode: mode) { _ in
                 postToPidClick(target: target)
@@ -105,19 +88,6 @@ public final class EventInjector: @unchecked Sendable {
         case .cascade:
             return cascadeClick(target: target)
         }
-    }
-
-    private func sessionTapClick(target: InjectionTarget, cursorBefore: CGPoint) -> (Bool, String) {
-        let point = target.clickPointQuartz
-        guard let down = makeMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
-              let up = makeMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
-            return (false, "eventCreateFailed")
-        }
-        down.post(tap: .cgSessionEventTap)
-        up.post(tap: .cgSessionEventTap)
-        let restoreQuartz = TargetResolver.appKitToQuartz(cursorBefore)
-        CGWarpMouseCursorPosition(restoreQuartz)
-        return (true, "sessionTap+warpRestore")
     }
 
     private func postToPidClick(target: InjectionTarget) -> (Bool, String) {

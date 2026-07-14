@@ -30,11 +30,6 @@ public struct InjectionTarget: Sendable {
         self.clickPointAppKit = clickPointAppKit
         self.clickPointQuartz = clickPointQuartz
     }
-
-    public var logLine: String {
-        let wid = windowID.map(String.init) ?? "nil"
-        return "app=\(appName) pid=\(pid) frame=\(NSStringFromRect(windowFrame)) clickAppKit=\(formatPoint(clickPointAppKit)) clickQuartz=\(formatPoint(clickPointQuartz)) windowID=\(wid)"
-    }
 }
 
 public enum TargetResolver {
@@ -65,15 +60,6 @@ public enum TargetResolver {
         )
     }
 
-    /// Absolute point offsets from top-left (legacy PoC units).
-    public static func resolveFrontmost(pointOffsetX: Int, pointOffsetY: Int) -> InjectionTarget? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
-        guard let frame = primaryWindowFrame(for: app) else { return nil }
-        let relX = frame.width > 0 ? Double(pointOffsetX) / Double(frame.width) : 0
-        let relY = frame.height > 0 ? Double(pointOffsetY) / Double(frame.height) : 0
-        return resolve(app: app, relativeX: relX, relativeY: relY)
-    }
-
     /// Preferred window frame for overlays / injection (AppKit screen coords).
     /// Prefer CGWindowList (works when the app is not frontmost); fall back to AX.
     public static func primaryWindowFrame(for app: NSRunningApplication) -> CGRect? {
@@ -83,17 +69,7 @@ public enum TargetResolver {
         return axBestWindowFrame(for: app)
     }
 
-    /// - Warning: Prefer `primaryWindowFrame(for:)` — focused AX often fails when Striker is frontmost.
-    public static func focusedWindowFrame(for app: NSRunningApplication) -> CGRect? {
-        primaryWindowFrame(for: app)
-    }
-
     public static func appKitToQuartz(_ point: CGPoint) -> CGPoint {
-        let primaryMaxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
-        return CGPoint(x: point.x, y: primaryMaxY - point.y)
-    }
-
-    public static func quartzToAppKit(_ point: CGPoint) -> CGPoint {
         let primaryMaxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
         return CGPoint(x: point.x, y: primaryMaxY - point.y)
     }
@@ -244,8 +220,4 @@ public enum TargetResolver {
 
 private extension CGRect {
     var area: CGFloat { max(0, width) * max(0, height) }
-}
-
-private func formatPoint(_ point: CGPoint) -> String {
-    String(format: "(%.1f,%.1f)", point.x, point.y)
 }

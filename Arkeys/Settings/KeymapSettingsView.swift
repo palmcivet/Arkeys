@@ -111,8 +111,8 @@ struct KeymapSettingsView: View {
         switch source {
         case .playCover:
             return String(localized: "keymap.source.playCover")
-        case .striker:
-            return String(localized: "keymap.source.striker")
+        case .arkeys:
+            return String(localized: "keymap.source.arkeys")
         case .muMu, .ldPlayer, .unknown:
             return String(localized: "keymap.source.unknown")
         }

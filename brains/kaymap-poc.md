@@ -61,7 +61,7 @@
 **元数据：**
 
 - 目标提示（bundle id / 包名）
-- 来源（PlayCover 版本、Striker 自有、未知等）
+- 来源（PlayCover 版本、Arkeys 自有、未知等）
 
 持久化建议：按目标标识存一份规范模型的 JSON（Application Support）；导入时可另存原始 bytes 便于对照。
 

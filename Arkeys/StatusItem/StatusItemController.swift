@@ -35,7 +35,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Striker")
+            button.image = NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Arkeys")
         }
         let menu = NSMenu()
         menu.delegate = self

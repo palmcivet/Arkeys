@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C41E17242DCD08D90041B68C"
-               BuildableName = "striker.app"
-               BlueprintName = "striker"
-               ReferencedContainer = "container:striker.xcodeproj">
+               BuildableName = "Arkeys.app"
+               BlueprintName = "Arkeys"
+               ReferencedContainer = "container:Arkeys.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C41E17322DCD08DA0041B68C"
-               BuildableName = "strikerTests.xctest"
-               BlueprintName = "strikerTests"
-               ReferencedContainer = "container:striker.xcodeproj">
+               BuildableName = "ArkeysTests.xctest"
+               BlueprintName = "ArkeysTests"
+               ReferencedContainer = "container:Arkeys.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C41E173C2DCD08DA0041B68C"
-               BuildableName = "strikerUITests.xctest"
-               BlueprintName = "strikerUITests"
-               ReferencedContainer = "container:striker.xcodeproj">
+               BuildableName = "ArkeysUITests.xctest"
+               BlueprintName = "ArkeysUITests"
+               ReferencedContainer = "container:Arkeys.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C41E17242DCD08D90041B68C"
-            BuildableName = "striker.app"
-            BlueprintName = "striker"
-            ReferencedContainer = "container:striker.xcodeproj">
+            BuildableName = "Arkeys.app"
+            BlueprintName = "Arkeys"
+            ReferencedContainer = "container:Arkeys.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,9 +86,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C41E17242DCD08D90041B68C"
-            BuildableName = "striker.app"
-            BlueprintName = "striker"
-            ReferencedContainer = "container:striker.xcodeproj">
+            BuildableName = "Arkeys.app"
+            BlueprintName = "Arkeys"
+            ReferencedContainer = "container:Arkeys.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

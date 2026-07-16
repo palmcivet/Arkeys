@@ -1,7 +1,7 @@
 import Foundation
 import AppKit
 
-/// A running app that can be bound as a Striker injection target.
+/// A running app that can be bound as a Arkeys injection target.
 public struct SelectableApp: Identifiable, Hashable, Sendable {
     public var id: String { bundleIdentifier }
     public let bundleIdentifier: String
@@ -16,7 +16,7 @@ public struct SelectableApp: Identifiable, Hashable, Sendable {
 }
 
 public enum RunningAppCatalog {
-    /// Regular user apps with a bundle id, excluding Striker and background agents.
+    /// Regular user apps with a bundle id, excluding Arkeys and background agents.
     public static func selectableApps(excludingBundleID selfBundleID: String? = Bundle.main.bundleIdentifier) -> [SelectableApp] {
         let apps = NSWorkspace.shared.runningApplications
             .filter { app in

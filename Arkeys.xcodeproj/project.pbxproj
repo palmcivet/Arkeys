@@ -21,37 +21,27 @@
 			containerPortal = C41E171D2DCD08D90041B68C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C41E17242DCD08D90041B68C;
-			remoteInfo = striker;
+			remoteInfo = Arkeys;
 		};
 		C41E173E2DCD08DA0041B68C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C41E171D2DCD08D90041B68C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C41E17242DCD08D90041B68C;
-			remoteInfo = striker;
+			remoteInfo = Arkeys;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C41E17252DCD08D90041B68C /* striker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = striker.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C41E17332DCD08DA0041B68C /* strikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = strikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		C41E173D2DCD08DA0041B68C /* strikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = strikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C41E17252DCD08D90041B68C /* Arkeys.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arkeys.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C41E17332DCD08DA0041B68C /* ArkeysTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArkeysTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C41E173D2DCD08DA0041B68C /* ArkeysUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArkeysUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C41E17272DCD08D90041B68C /* striker */ = {
+		C41E17272DCD08D90041B68C /* Arkeys */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = striker;
-			sourceTree = "<group>";
-		};
-		C41E17362DCD08DA0041B68C /* strikerTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = strikerTests;
-			sourceTree = "<group>";
-		};
-		C41E17402DCD08DA0041B68C /* strikerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = strikerUITests;
+			path = Arkeys;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -90,9 +80,7 @@
 		C41E171C2DCD08D90041B68C = {
 			isa = PBXGroup;
 			children = (
-				C41E17272DCD08D90041B68C /* striker */,
-				C41E17362DCD08DA0041B68C /* strikerTests */,
-				C41E17402DCD08DA0041B68C /* strikerUITests */,
+				C41E17272DCD08D90041B68C /* Arkeys */,
 				C41E17262DCD08D90041B68C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,9 +88,9 @@
 		C41E17262DCD08D90041B68C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C41E17252DCD08D90041B68C /* striker.app */,
-				C41E17332DCD08DA0041B68C /* strikerTests.xctest */,
-				C41E173D2DCD08DA0041B68C /* strikerUITests.xctest */,
+				C41E17252DCD08D90041B68C /* Arkeys.app */,
+				C41E17332DCD08DA0041B68C /* ArkeysTests.xctest */,
+				C41E173D2DCD08DA0041B68C /* ArkeysUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -110,9 +98,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C41E17242DCD08D90041B68C /* striker */ = {
+		C41E17242DCD08D90041B68C /* Arkeys */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C41E17472DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "striker" */;
+			buildConfigurationList = C41E17472DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "Arkeys" */;
 			buildPhases = (
 				C41E17212DCD08D90041B68C /* Sources */,
 				C41E17222DCD08D90041B68C /* Frameworks */,
@@ -123,9 +111,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C41E17272DCD08D90041B68C /* striker */,
+				C41E17272DCD08D90041B68C /* Arkeys */,
 			);
-			name = striker;
+			name = Arkeys;
 			packageProductDependencies = (
 				A10000012DCD20000041B68C /* KeymapCore */,
 				A10000022DCD20000041B68C /* KeymapPlayCover */,
@@ -134,13 +122,13 @@
 				A10000052DCD20000041B68C /* InputRuntime */,
 				A10000062DCD20000041B68C /* EditorKit */,
 			);
-			productName = striker;
-			productReference = C41E17252DCD08D90041B68C /* striker.app */;
+			productName = Arkeys;
+			productReference = C41E17252DCD08D90041B68C /* Arkeys.app */;
 			productType = "com.apple.product-type.application";
 		};
-		C41E17322DCD08DA0041B68C /* strikerTests */ = {
+		C41E17322DCD08DA0041B68C /* ArkeysTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C41E174A2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "strikerTests" */;
+			buildConfigurationList = C41E174A2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "ArkeysTests" */;
 			buildPhases = (
 				C41E172F2DCD08DA0041B68C /* Sources */,
 				C41E17302DCD08DA0041B68C /* Frameworks */,
@@ -151,19 +139,16 @@
 			dependencies = (
 				C41E17352DCD08DA0041B68C /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				C41E17362DCD08DA0041B68C /* strikerTests */,
-			);
-			name = strikerTests;
+			name = ArkeysTests;
 			packageProductDependencies = (
 			);
-			productName = strikerTests;
-			productReference = C41E17332DCD08DA0041B68C /* strikerTests.xctest */;
+			productName = ArkeysTests;
+			productReference = C41E17332DCD08DA0041B68C /* ArkeysTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		C41E173C2DCD08DA0041B68C /* strikerUITests */ = {
+		C41E173C2DCD08DA0041B68C /* ArkeysUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C41E174D2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "strikerUITests" */;
+			buildConfigurationList = C41E174D2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "ArkeysUITests" */;
 			buildPhases = (
 				C41E17392DCD08DA0041B68C /* Sources */,
 				C41E173A2DCD08DA0041B68C /* Frameworks */,
@@ -174,14 +159,11 @@
 			dependencies = (
 				C41E173F2DCD08DA0041B68C /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				C41E17402DCD08DA0041B68C /* strikerUITests */,
-			);
-			name = strikerUITests;
+			name = ArkeysUITests;
 			packageProductDependencies = (
 			);
-			productName = strikerUITests;
-			productReference = C41E173D2DCD08DA0041B68C /* strikerUITests.xctest */;
+			productName = ArkeysUITests;
+			productReference = C41E173D2DCD08DA0041B68C /* ArkeysUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -207,7 +189,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C41E17202DCD08D90041B68C /* Build configuration list for PBXProject "striker" */;
+			buildConfigurationList = C41E17202DCD08D90041B68C /* Build configuration list for PBXProject "Arkeys" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -230,9 +212,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C41E17242DCD08D90041B68C /* striker */,
-				C41E17322DCD08DA0041B68C /* strikerTests */,
-				C41E173C2DCD08DA0041B68C /* strikerUITests */,
+				C41E17242DCD08D90041B68C /* Arkeys */,
+				C41E17322DCD08DA0041B68C /* ArkeysTests */,
+				C41E173C2DCD08DA0041B68C /* ArkeysUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -288,12 +270,12 @@
 /* Begin PBXTargetDependency section */
 		C41E17352DCD08DA0041B68C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = C41E17242DCD08D90041B68C /* striker */;
+			target = C41E17242DCD08D90041B68C /* Arkeys */;
 			targetProxy = C41E17342DCD08DA0041B68C /* PBXContainerItemProxy */;
 		};
 		C41E173F2DCD08DA0041B68C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = C41E17242DCD08D90041B68C /* striker */;
+			target = C41E17242DCD08D90041B68C /* Arkeys */;
 			targetProxy = C41E173E2DCD08DA0041B68C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -420,20 +402,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = striker/striker.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Arkeys/Arkeys.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Arkeys;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -443,7 +426,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.striker;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeys;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -460,20 +443,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = striker/striker.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Arkeys/Arkeys.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Arkeys;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -483,7 +467,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.striker;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeys;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -506,14 +490,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.strikerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeysTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/striker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/striker";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arkeys.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arkeys";
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Debug;
@@ -529,14 +513,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.strikerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeysTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/striker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/striker";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arkeys.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Arkeys";
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Release;
@@ -551,14 +535,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.strikerUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeysUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = striker;
+				TEST_TARGET_NAME = Arkeys;
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Debug;
@@ -573,14 +557,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
 				MACOSX_DEPLOYMENT_TARGET = 15.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.strikerUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = palmcivet.arkeysUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = striker;
+				TEST_TARGET_NAME = Arkeys;
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Release;
@@ -588,7 +572,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C41E17202DCD08D90041B68C /* Build configuration list for PBXProject "striker" */ = {
+		C41E17202DCD08D90041B68C /* Build configuration list for PBXProject "Arkeys" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C41E17452DCD08DA0041B68C /* Debug */,
@@ -597,7 +581,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C41E17472DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "striker" */ = {
+		C41E17472DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "Arkeys" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C41E17482DCD08DA0041B68C /* Debug */,
@@ -606,7 +590,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C41E174A2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "strikerTests" */ = {
+		C41E174A2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "ArkeysTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C41E174B2DCD08DA0041B68C /* Debug */,
@@ -615,7 +599,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C41E174D2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "strikerUITests" */ = {
+		C41E174D2DCD08DA0041B68C /* Build configuration list for PBXNativeTarget "ArkeysUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C41E174E2DCD08DA0041B68C /* Debug */,

@@ -1,11 +1,11 @@
-# Striker 本地存储
+# Arkeys 本地存储
 
 用户设置与键鼠方案均落在 macOS Application Support，不经 iCloud / 沙盒容器。
 
 根目录：
 
 ```text
-~/Library/Application Support/Striker/
+~/Library/Application Support/Arkeys/
   settings.json
   Keymaps/
     {bundleID}/
@@ -113,4 +113,4 @@ ContentView / Tray（未来）
 | `AppSettings` / `AppSettingsStore` | `Packages/KeymapCore/.../AppSettingsStore.swift` |
 | `CanonicalKeymap` | `Packages/KeymapCore/.../CanonicalKeymap.swift` |
 | 运行时编排 | `Packages/InputRuntime/.../InputRuntime.swift` |
-| 设置 UI（方案 Picker） | `striker/ContentView.swift` |
+| 设置 UI（方案 Picker） | `Arkeys/Settings/KeymapSettingsView.swift` |

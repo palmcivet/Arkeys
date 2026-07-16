@@ -16,7 +16,7 @@ final class KeymapCoreTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: dir) }
         let store = KeymapStore(directory: dir)
-        var map = CanonicalKeymap(targetHint: "com.example.app", source: .striker(version: "1"))
+        var map = CanonicalKeymap(targetHint: "com.example.app", source: .arkeys(version: "1"))
         map.elements = [
             .button(ButtonElement(key: .virtual(0, name: "A"), transform: .init(x: 0.1, y: 0.2, size: 0.05)))
         ]
@@ -32,7 +32,7 @@ final class KeymapCoreTests: XCTestCase {
         let store = KeymapStore(directory: dir)
         let bundleID = "com.example.game"
 
-        var mapA = CanonicalKeymap(targetHint: bundleID, source: .striker(version: "1"))
+        var mapA = CanonicalKeymap(targetHint: bundleID, source: .arkeys(version: "1"))
         mapA.elements = [
             .button(ButtonElement(key: .virtual(0, name: "A"), transform: .init(x: 0.1, y: 0.2, size: 0.05)))
         ]

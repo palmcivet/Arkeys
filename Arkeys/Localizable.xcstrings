@@ -32,8 +32,8 @@
     "settings.window.title" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Striker Settings" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Striker 设置" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys Settings" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys 设置" } }
       }
     },
     "menu.enable" : {
@@ -211,11 +211,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "PlayCover" } }
       }
     },
-    "keymap.source.striker" : {
+    "keymap.source.arkeys" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Striker" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Striker" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys" } }
       }
     },
     "keymap.source.unknown" : {

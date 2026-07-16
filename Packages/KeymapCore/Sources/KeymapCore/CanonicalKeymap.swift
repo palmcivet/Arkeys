@@ -130,7 +130,7 @@ public enum KeymapSourceMeta: Codable, Hashable, Sendable {
     case playCover(version: String)
     case muMu
     case ldPlayer
-    case striker(version: String)
+    case arkeys(version: String)
     case unknown(String)
 
     public var schemeID: KeymapSchemeID {
@@ -138,7 +138,7 @@ public enum KeymapSourceMeta: Codable, Hashable, Sendable {
         case .playCover: return .playCover
         case .muMu: return .muMu
         case .ldPlayer: return .ldPlayer
-        case .striker, .unknown: return .playCover
+        case .arkeys, .unknown: return .playCover
         }
     }
 }
@@ -150,7 +150,7 @@ public struct CanonicalKeymap: Codable, Hashable, Sendable {
 
     public init(
         targetHint: String? = nil,
-        source: KeymapSourceMeta = .striker(version: "1.0.0"),
+        source: KeymapSourceMeta = .arkeys(version: "1.0.0"),
         elements: [KeymapElement] = []
     ) {
         self.targetHint = targetHint

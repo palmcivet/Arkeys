@@ -12,7 +12,7 @@ public struct CapabilityReport: Sendable {
     public let sandboxEnabled: Bool
 
     public var summaryLine: String {
-        "[Striker][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
+        "[Arkeys][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
     }
 }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Persisted user preferences under Application Support/Striker/settings.json.
+/// Persisted user preferences under Application Support/Arkeys/settings.json.
 public struct AppSettings: Codable, Hashable, Sendable {
     public var lastTargetBundleID: String?
     public var lastTargetAppName: String?
@@ -60,11 +60,7 @@ public final class AppSettingsStore: @unchecked Sendable {
         if let fileURL {
             self.fileURL = fileURL
         } else {
-            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                ?? FileManager.default.temporaryDirectory
-            let dir = base.appendingPathComponent("Striker", isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            self.fileURL = dir.appendingPathComponent("settings.json")
+            self.fileURL = AppSupportPaths.rootDirectory().appendingPathComponent("settings.json")
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

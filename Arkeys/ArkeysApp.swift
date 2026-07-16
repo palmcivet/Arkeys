@@ -2,7 +2,7 @@ import SwiftUI
 import InputRuntime
 
 @main
-struct strikerApp: App {
+struct ArkeysApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

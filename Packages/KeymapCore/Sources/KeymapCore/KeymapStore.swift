@@ -39,11 +39,8 @@ public final class KeymapStore: @unchecked Sendable {
         if let directory {
             self.directory = directory
         } else {
-            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                ?? FileManager.default.temporaryDirectory
-            self.directory = base.appendingPathComponent("Striker/Keymaps", isDirectory: true)
+            self.directory = AppSupportPaths.keymapsDirectory()
         }
-        try? FileManager.default.createDirectory(at: self.directory, withIntermediateDirectories: true)
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

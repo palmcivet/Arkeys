@@ -8,7 +8,7 @@ public enum InjectLogger {
     }
 
     public static func log(_ category: Category, _ message: String) {
-        print("[Striker][\(category.rawValue)] \(message)")
+        print("[Arkeys][\(category.rawValue)] \(message)")
     }
 
     public static func formatDelta(from: CGPoint, to: CGPoint) -> String {

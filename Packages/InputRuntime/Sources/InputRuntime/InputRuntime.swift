@@ -42,7 +42,7 @@ public final class InputRuntime: ObservableObject {
     private var didStart = false
     private var isRestoringSettings = false
     private var pendingInjectModeRaw: String?
-    /// Last non-Striker app that was frontmost — used by Compatibility Test Click.
+    /// Last non-Arkeys app that was frontmost — used by Compatibility Test Click.
     private var previousFrontmostApp: NSRunningApplication?
     private var frontmostObserver: NSObjectProtocol?
 
@@ -114,7 +114,7 @@ public final class InputRuntime: ObservableObject {
             return
         }
         if bundleID == Bundle.main.bundleIdentifier {
-            InjectLogger.log(.target, "skip binding Striker itself")
+            InjectLogger.log(.target, "skip binding Arkeys itself")
             return
         }
         bind(bundleID: bundleID, appName: app.localizedName ?? bundleID)
@@ -122,7 +122,7 @@ public final class InputRuntime: ObservableObject {
 
     public func bind(bundleID: String, appName: String? = nil) {
         if bundleID == Bundle.main.bundleIdentifier {
-            InjectLogger.log(.target, "skip binding Striker itself")
+            InjectLogger.log(.target, "skip binding Arkeys itself")
             return
         }
         targetBundleID = bundleID
@@ -132,14 +132,14 @@ public final class InputRuntime: ObservableObject {
         InjectLogger.log(.target, "bound target=\(targetAppName) id=\(bundleID)")
     }
 
-    /// Create a blank Striker keymap scheme for the current target and persist it.
+    /// Create a blank Arkeys keymap scheme for the current target and persist it.
     @discardableResult
     public func createNewKeymap(name: String = "Untitled") -> Bool {
         guard let targetBundleID else {
             InjectLogger.log(.target, "cannot create keymap — no target")
             return false
         }
-        let blank = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
+        let blank = CanonicalKeymap(targetHint: targetBundleID, source: .arkeys(version: "1.0.0"))
         do {
             let meta = try store.create(keymap: blank, bundleID: targetBundleID, name: name)
             activeSchemeID = meta.id
@@ -225,7 +225,7 @@ public final class InputRuntime: ObservableObject {
     public func deleteActiveScheme() {
         guard let targetBundleID else { return }
         guard let activeSchemeID else {
-            keymap = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
+            keymap = CanonicalKeymap(targetHint: targetBundleID, source: .arkeys(version: "1.0.0"))
             return
         }
         do {
@@ -253,8 +253,8 @@ public final class InputRuntime: ObservableObject {
         performClick(on: target)
     }
 
-    /// Compatibility Test Click: inject into the previous (non-Striker) frontmost window.
-    /// Settings is frontmost when the button is pressed, so `resolveFrontmost` would hit Striker.
+    /// Compatibility Test Click: inject into the previous (non-Arkeys) frontmost window.
+    /// Settings is frontmost when the button is pressed, so `resolveFrontmost` would hit Arkeys.
     public func fireTestClick(relativeX: Double, relativeY: Double) {
         let app = usablePreviousFrontmost() ?? frontmostExcludingSelf()
         guard let app else {
@@ -272,7 +272,7 @@ public final class InputRuntime: ObservableObject {
     }
 
     /// Prompt TCC (system Accessibility Access dialog when eligible), then open the
-    /// Accessibility privacy pane so the user can toggle Striker if they already denied.
+    /// Accessibility privacy pane so the user can toggle Arkeys if they already denied.
     public func openAccessibilitySettings() {
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         openAccessibilityPrivacyPane()
@@ -365,18 +365,33 @@ public final class InputRuntime: ObservableObject {
             return
         }
 
-        guard isEnabled else { return }
-        guard let targetBundleID else { return }
-        guard let front = NSWorkspace.shared.frontmostApplication,
-              front.bundleIdentifier == targetBundleID else {
+        guard isEnabled else {
+            InjectLogger.log(.inject, "skip: disabled")
+            return
+        }
+        guard let targetBundleID else {
+            InjectLogger.log(.inject, "skip: no target bound")
+            return
+        }
+        guard let front = NSWorkspace.shared.frontmostApplication else {
+            InjectLogger.log(.inject, "skip: no frontmost app")
+            return
+        }
+        guard front.bundleIdentifier == targetBundleID else {
+            InjectLogger.log(.inject, "skip: frontmost=\(front.bundleIdentifier ?? "nil") target=\(targetBundleID)")
             return
         }
 
-        // Prefer bare keys: ignore when command/option/control/shift held.
         let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        guard mods.isEmpty else { return }
+        guard mods.isEmpty else {
+            InjectLogger.log(.inject, "skip: modifier held \(mods.rawValue)")
+            return
+        }
 
-        guard let button = keymap.button(matchingKeyCode: keyCode) else { return }
+        guard let button = keymap.button(matchingKeyCode: keyCode) else {
+            InjectLogger.log(.inject, "skip: no binding for keyCode=\(keyCode) (bindings=\(keymap.runnableButtons.count))")
+            return
+        }
         InjectLogger.log(.inject, "matched binding \(button.key.name) @ (\(button.transform.x),\(button.transform.y))")
         fireClick(relativeX: button.transform.x, relativeY: button.transform.y)
     }
@@ -409,7 +424,7 @@ public final class InputRuntime: ObservableObject {
             keymap = active.keymap
         } else {
             activeSchemeID = nil
-            keymap = CanonicalKeymap(targetHint: targetBundleID, source: .striker(version: "1.0.0"))
+            keymap = CanonicalKeymap(targetHint: targetBundleID, source: .arkeys(version: "1.0.0"))
         }
     }
 

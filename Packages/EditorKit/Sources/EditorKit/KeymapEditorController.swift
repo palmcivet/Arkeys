@@ -191,7 +191,7 @@ public final class KeymapEditorController: ObservableObject {
 
 private enum InjectLog {
     static func editor(_ message: String) {
-        print("[Striker][editor] \(message)")
+        print("[Arkeys][editor] \(message)")
     }
 }
 

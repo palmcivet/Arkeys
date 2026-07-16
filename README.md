@@ -1,6 +1,6 @@
-# Striker
+# Arkeys
 
-- [Striker](#striker)
+- [Arkeys](#arkeys)
   - [Requirements](#requirements)
   - [Technical Approach](#technical-approach)
     - [Automatic](#automatic)
@@ -13,7 +13,7 @@ A macOS utility that lets you trigger mouse clicks inside a target application's
 ## Requirements
 
 - macOS 14 or later
-- Accessibility permission: **System Settings → Privacy & Security → Accessibility** → enable **Striker**.
+- Accessibility permission: **System Settings → Privacy & Security → Accessibility** → enable **Arkeys**.
 
 ## Technical Approach
 

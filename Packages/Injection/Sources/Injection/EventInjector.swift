@@ -61,6 +61,9 @@ public struct InjectResult: Sendable {
 private enum CGMouseEventField {
     static let windowUnderMousePointer: CGEventField = CGEventField(rawValue: 91)!
     static let windowUnderMousePointerThatCanHandleThisEvent: CGEventField = CGEventField(rawValue: 92)!
+    /// Chromium/Electron treat subtype 3 as a "real mouse" event.
+    /// Without this, the renderer IPC boundary drops synthetic clicks.
+    static let chromiumTrustedSubtype: Int64 = 3
 }
 
 public final class EventInjector: @unchecked Sendable {
@@ -90,10 +93,11 @@ public final class EventInjector: @unchecked Sendable {
         }
     }
 
+    // MARK: - Per-PID targeted click (postToPid / SkyLight)
+
     private func postToPidClick(target: InjectionTarget) -> (Bool, String) {
-        let point = target.clickPointQuartz
-        guard let down = makeMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
-              let up = makeMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
+        guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
+              let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
             return (false, "eventCreateFailed")
         }
         down.postToPid(target.pid)
@@ -105,9 +109,8 @@ public final class EventInjector: @unchecked Sendable {
         guard SkyLightBridge.shared.isAvailable else {
             return (false, "skyLightUnavailable")
         }
-        let point = target.clickPointQuartz
-        guard let down = makeMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
-              let up = makeMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
+        guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
+              let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
             return (false, "eventCreateFailed")
         }
         let okDown = SkyLightBridge.shared.post(down, to: target.pid)
@@ -115,37 +118,71 @@ public final class EventInjector: @unchecked Sendable {
         return (okDown && okUp, okDown && okUp ? "SLEventPostToPid" : "skyLightPostFailed")
     }
 
+    // MARK: - Global HID click (moves cursor, works for all targets)
+
     private func hidTapClick(target: InjectionTarget, cursorBefore: CGPoint) -> (Bool, String) {
         let point = target.clickPointQuartz
         var notes: [String] = []
 
+        // Warp cursor synchronously to the click point. This is more reliable
+        // than posting a mouseMoved event (which is async and might not be
+        // processed before the mouseDown arrives).
+        CGWarpMouseCursorPosition(point)
+        // Re-associate to suppress the "mouse acceleration catchup" after warp.
+        CGAssociateMouseAndMouseCursorPosition(1)
+        notes.append("warpTo")
+
         if preferMouseMovedBeforeHID {
-            if let moved = makeMouseEvent(type: .mouseMoved, at: point, windowID: target.windowID) {
+            if let moved = makeHIDMouseEvent(type: .mouseMoved, at: point, windowID: target.windowID) {
                 moved.post(tap: .cghidEventTap)
                 notes.append("mouseMoved")
             }
+            usleep(10_000)
         }
 
-        guard let down = makeMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
-              let up = makeMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
+        guard let down = makeHIDMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
+              let up = makeHIDMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
             return (false, "eventCreateFailed")
         }
+
         down.post(tap: .cghidEventTap)
+
+        // iOS-on-Mac apps (UIKit compat layer) need a realistic hold duration.
+        // CGEvent clicks complete in <1ms; UIScrollView's delaysContentTouches
+        // waits ~150ms. A 60ms hold is enough for button taps in most games.
+        if target.isIOSOnMac {
+            usleep(60_000)
+        }
+
         up.post(tap: .cghidEventTap)
         notes.append("hidDownUp")
 
         if restoreCursorAfterHID {
+            if target.isIOSOnMac {
+                usleep(30_000)
+            }
             let restoreQuartz = TargetResolver.appKitToQuartz(cursorBefore)
             CGWarpMouseCursorPosition(restoreQuartz)
+            CGAssociateMouseAndMouseCursorPosition(1)
             notes.append("warpRestore")
         }
         return (true, notes.joined(separator: "+"))
     }
 
+    // MARK: - Cascade (auto-select best route)
+
     private func cascadeClick(target: InjectionTarget) -> InjectResult {
         let before = NSEvent.mouseLocation
         let start = CFAbsoluteTimeGetCurrent()
         var steps: [String] = []
+
+        // iOS-on-Mac apps (UIKit touch pipeline) ignore postToPid/SkyLight CGEvents.
+        // Only events from the real HID stream reach their touch translation layer.
+        if target.isIOSOnMac {
+            let hid = hidTapClick(target: target, cursorBefore: before)
+            steps.append(cascadeStep("hidTap(iOSOnMac)", hid))
+            return finishCascade(steps: steps, posted: hid.0, before: before, start: start)
+        }
 
         let pidResult = postToPidClick(target: target)
         steps.append(cascadeStep("postToPid", pidResult))
@@ -164,8 +201,6 @@ public final class EventInjector: @unchecked Sendable {
         return finishCascade(steps: steps, posted: hid.0, before: before, start: start)
     }
 
-    /// Cascade step log: `postToPid=ok` or `postToPid=fail(eventCreateFailed)`.
-    /// Avoids redundant `postToPid=ok:postToPid` when the detail string just repeats the route name.
     private func cascadeStep(_ name: String, _ result: (Bool, String)) -> String {
         if result.0 {
             if result.1 == name || result.1.isEmpty {
@@ -191,7 +226,74 @@ public final class EventInjector: @unchecked Sendable {
         return result
     }
 
-    private func makeMouseEvent(type: CGEventType, at point: CGPoint, windowID: CGWindowID?) -> CGEvent? {
+    // MARK: - Targeted event construction (postToPid / SkyLight)
+
+    /// Construct a high-fidelity mouse event via `NSEvent` → `.cgEvent` extraction.
+    /// Auto-fills ~12 internal fields (source PID, user/group IDs, event-type
+    /// mirrors, window number, etc.) that raw `CGEvent` skips, making the
+    /// event indistinguishable from a real user click to most apps.
+    private func makeTargetedMouseEvent(type: CGEventType, target: InjectionTarget) -> CGEvent? {
+        let point = target.clickPointQuartz
+        let isClick = type == .leftMouseDown || type == .leftMouseUp
+
+        let nsType: NSEvent.EventType
+        switch type {
+        case .leftMouseDown: nsType = .leftMouseDown
+        case .leftMouseUp:   nsType = .leftMouseUp
+        case .mouseMoved:    nsType = .mouseMoved
+        default:             nsType = .leftMouseDown
+        }
+
+        let nsEvent = NSEvent.mouseEvent(
+            with: nsType,
+            location: NSPoint(x: point.x, y: point.y),
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: Int(target.windowID ?? 0),
+            context: nil,
+            eventNumber: Self.nextEventNumber(),
+            clickCount: isClick ? 1 : 0,
+            pressure: type == .leftMouseDown ? 1.0 : 0.0
+        )
+        guard let event = nsEvent?.cgEvent else { return nil }
+
+        event.location = point
+
+        if isClick {
+            event.setIntegerValueField(.mouseEventClickState, value: 1)
+            event.setIntegerValueField(.mouseEventButtonNumber, value: 0)
+            event.setIntegerValueField(.mouseEventSubtype, value: CGMouseEventField.chromiumTrustedSubtype)
+        }
+
+        if let windowID = target.windowID {
+            event.setIntegerValueField(CGMouseEventField.windowUnderMousePointer, value: Int64(windowID))
+            event.setIntegerValueField(CGMouseEventField.windowUnderMousePointerThatCanHandleThisEvent, value: Int64(windowID))
+        }
+
+        // Window-local coordinates via private CGEventSetWindowLocation.
+        let windowLocal = TargetResolver.windowLocalQuartz(point: point, windowFrameAppKit: target.windowFrame)
+        _ = SkyLightBridge.shared.setWindowLocation(event, to: windowLocal)
+
+        // When target is backgrounded, set maskCommand (0x00100000) as a
+        // WindowServer filter bypass. NOT maskNonCoalesced (0x100).
+        let targetIsActive = NSRunningApplication(processIdentifier: target.pid)?.isActive ?? false
+        if !targetIsActive {
+            event.flags = .maskCommand
+        }
+
+        return event
+    }
+
+    private static let eventCounter = OSAtomicCounter()
+    private static func nextEventNumber() -> Int {
+        eventCounter.increment()
+    }
+
+    // MARK: - HID event construction (global tap fallback)
+
+    /// Simpler construction for events posted via `.cghidEventTap`.
+    /// No maskCommand (would be seen as Cmd held down by WindowServer).
+    private func makeHIDMouseEvent(type: CGEventType, at point: CGPoint, windowID: CGWindowID?) -> CGEvent? {
         guard let event = CGEvent(
             mouseEventSource: source,
             mouseType: type,
@@ -202,6 +304,8 @@ public final class EventInjector: @unchecked Sendable {
         }
         if type == .leftMouseDown || type == .leftMouseUp {
             event.setIntegerValueField(.mouseEventClickState, value: 1)
+            event.setIntegerValueField(.mouseEventButtonNumber, value: 0)
+            event.setIntegerValueField(.mouseEventSubtype, value: CGMouseEventField.chromiumTrustedSubtype)
         }
         if let windowID {
             event.setIntegerValueField(CGMouseEventField.windowUnderMousePointer, value: Int64(windowID))
@@ -226,5 +330,20 @@ public final class EventInjector: @unchecked Sendable {
         )
         InjectLogger.log(.inject, result.summary)
         return result
+    }
+}
+
+// MARK: - Thread-safe event-number counter
+
+private final class OSAtomicCounter: @unchecked Sendable {
+    private var _value: Int = 0
+    private var _lock = os_unfair_lock()
+
+    func increment() -> Int {
+        os_unfair_lock_lock(&_lock)
+        _value += 1
+        let v = _value
+        os_unfair_lock_unlock(&_lock)
+        return v
     }
 }

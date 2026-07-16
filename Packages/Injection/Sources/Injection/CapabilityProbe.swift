@@ -7,11 +7,12 @@ public struct CapabilityReport: Sendable {
     public let accessibilityTrusted: Bool
     public let eventTapCreatable: Bool
     public let skyLightPostToPid: Bool
+    public let setWindowLocation: Bool
     public let authMessage: Bool
     public let sandboxEnabled: Bool
 
     public var summaryLine: String {
-        "[Striker][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
+        "[Striker][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
     }
 }
 
@@ -38,6 +39,7 @@ public enum CapabilityProbe {
             accessibilityTrusted: axTrusted,
             eventTapCreatable: tapOK,
             skyLightPostToPid: sky.isAvailable,
+            setWindowLocation: sky.hasSetWindowLocation,
             authMessage: sky.hasAuthMessage,
             sandboxEnabled: sandbox
         )

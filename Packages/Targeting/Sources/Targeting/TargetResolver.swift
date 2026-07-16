@@ -12,6 +12,10 @@ public struct InjectionTarget: Sendable {
     public let clickPointAppKit: CGPoint
     /// Screen coordinates in Quartz/CGEvent space (origin top-left).
     public let clickPointQuartz: CGPoint
+    /// True when the target is an iOS app running on macOS (via PlayCover,
+    /// App Store iPad app, etc.). These apps use UIKit's mouse-to-touch
+    /// translation; only HID-stream events reach their touch pipeline.
+    public let isIOSOnMac: Bool
 
     public init(
         pid: pid_t,
@@ -20,7 +24,8 @@ public struct InjectionTarget: Sendable {
         windowFrame: CGRect,
         windowID: CGWindowID?,
         clickPointAppKit: CGPoint,
-        clickPointQuartz: CGPoint
+        clickPointQuartz: CGPoint,
+        isIOSOnMac: Bool = false
     ) {
         self.pid = pid
         self.appName = appName
@@ -29,6 +34,7 @@ public struct InjectionTarget: Sendable {
         self.windowID = windowID
         self.clickPointAppKit = clickPointAppKit
         self.clickPointQuartz = clickPointQuartz
+        self.isIOSOnMac = isIOSOnMac
     }
 }
 
@@ -56,7 +62,8 @@ public enum TargetResolver {
             windowFrame: frame,
             windowID: windowID,
             clickPointAppKit: clickAppKit,
-            clickPointQuartz: clickQuartz
+            clickPointQuartz: clickQuartz,
+            isIOSOnMac: detectIOSOnMac(app: app)
         )
     }
 
@@ -83,6 +90,47 @@ public enum TargetResolver {
     public static func appKitFrameToQuartz(_ frame: CGRect) -> CGRect {
         let topLeft = appKitToQuartz(CGPoint(x: frame.minX, y: frame.maxY))
         return CGRect(x: topLeft.x, y: topLeft.y, width: frame.width, height: frame.height)
+    }
+
+    /// Convert a screen-space Quartz point to window-local coordinates.
+    /// Used by `CGEventSetWindowLocation` to tell WindowServer exactly where
+    /// inside the window the click lands.
+    public static func windowLocalQuartz(point: CGPoint, windowFrameAppKit: CGRect) -> CGPoint {
+        let quartzFrame = appKitFrameToQuartz(windowFrameAppKit)
+        return CGPoint(
+            x: point.x - quartzFrame.origin.x,
+            y: point.y - quartzFrame.origin.y
+        )
+    }
+
+    // MARK: - iOS-on-Mac detection
+
+    /// Detect whether the app is an iOS/iPadOS binary running on macOS.
+    /// These apps use UIKit's mouse-to-touch translation layer; only events
+    /// from the real HID stream reach their touch pipeline — `postToPid`
+    /// CGEvents are silently ignored.
+    private static func detectIOSOnMac(app: NSRunningApplication) -> Bool {
+        guard let bundleURL = app.bundleURL else { return false }
+
+        // Try reading Info.plist from the running bundle location
+        let plistURL = bundleURL.appendingPathComponent("Info.plist")
+        if let plist = NSDictionary(contentsOf: plistURL) {
+            if let platform = plist["DTPlatformName"] as? String,
+               platform.lowercased() == "iphoneos" {
+                return true
+            }
+            if let requiresIPhone = plist["LSRequiresIPhoneOS"] as? Bool,
+               requiresIPhone {
+                return true
+            }
+        }
+
+        // PlayCover wraps iOS .app inside a Wrapper/ directory
+        if bundleURL.path.contains("/Wrapper/") {
+            return true
+        }
+
+        return false
     }
 
     // MARK: - CGWindowList (Quartz bounds → AppKit)

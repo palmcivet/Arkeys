@@ -2,6 +2,7 @@
 
 - [Arkeys](#arkeys)
   - [Requirements](#requirements)
+  - [Uninstall](#uninstall)
   - [Technical Approach](#technical-approach)
     - [Automatic](#automatic)
     - [Post to Process](#post-to-process)
@@ -12,8 +13,19 @@ A macOS utility that lets you trigger mouse clicks inside a target application's
 
 ## Requirements
 
-- macOS 14 or later
+- macOS 15.4 or later
 - Accessibility permission: **System Settings → Privacy & Security → Accessibility** → enable **Arkeys**.
+
+## Uninstall
+
+Deleting `Arkeys.app` does not remove leftover files. Delete these if they exist:
+
+```text
+~/Library/Application Support/Arkeys/
+~/Library/Preferences/palmcivet.arkeys.plist
+```
+
+Also remove **Arkeys** from **System Settings → Privacy & Security → Accessibility**.
 
 ## Technical Approach
 

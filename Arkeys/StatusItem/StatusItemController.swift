@@ -35,12 +35,25 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Arkeys")
+            button.image = Self.menuBarImage()
+            button.toolTip = "Arkeys"
+            button.setAccessibilityLabel("Arkeys")
         }
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
         statusItem = item
+    }
+
+    /// The asset is a vector template, so it is copied before resizing to avoid
+    /// mutating the instance the asset catalog hands back.
+    private static func menuBarImage() -> NSImage? {
+        guard let image = NSImage(named: "MenuBarIcon")?.copy() as? NSImage else {
+            return NSImage(systemSymbolName: "hammer.fill", accessibilityDescription: "Arkeys")
+        }
+        image.isTemplate = true
+        image.size = NSSize(width: 18, height: 18)
+        return image
     }
 
     private func removeStatusItem() {

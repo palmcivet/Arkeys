@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Resolve version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ -z "$version" ]]; then
+            echo "empty version from tag: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "Publishing Arkeys $version from $GITHUB_REF_NAME"
+
+      - name: Show Xcode
+        run: xcodebuild -version
+
+      - name: Archive and package
+        run: ./scripts/package.sh "$VERSION"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Arkeys ${{ env.VERSION }}
+          generate_release_notes: true
+          prerelease: ${{ contains(env.VERSION, '-') }}
+          fail_on_unmatched_files: true
+          body: |
+            CI-built macOS app (universal, ad-hoc signed). First launch: right-click **Arkeys.app** → Open.
+          files: |
+            dist/Arkeys-${{ env.VERSION }}.zip
+            dist/SHA256SUMS

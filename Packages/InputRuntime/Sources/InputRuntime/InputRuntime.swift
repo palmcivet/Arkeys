@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ApplicationServices
 import Combine
 import KeymapCore
 import Injection
@@ -62,14 +63,20 @@ public final class InputRuntime: ObservableObject {
     public func startIfNeeded() {
         guard !didStart else { return }
         didStart = true
+        InjectLogger.log(.capability, "Arkeys starting (pid=\(ProcessInfo.processInfo.processIdentifier))")
         restoreSettings()
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         startMonitoring()
         startTrackingFrontmost()
+        InjectLogger.log(.capability, "ready: mode=\(injectMode.rawValue) target=\(targetBundleID ?? "nil") "
+            + "bindings=\(keymap.runnableButtons.count) globalMonitor=\(globalKeyMonitor != nil)")
     }
 
     public func startMonitoring() {
         stopMonitoring()
+
+        let axTrusted = AXIsProcessTrusted()
+        InjectLogger.log(.capability, "startMonitoring: AXIsProcessTrusted=\(axTrusted)")
 
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             Task { @MainActor in
@@ -80,9 +87,8 @@ public final class InputRuntime: ObservableObject {
             Task { @MainActor in
                 self?.handleKeyEvent(event, source: "local")
             }
-            // While editing, swallow Escape so AppKit doesn't also treat it as cancel /
-            // so we don't bind Escape as a hotkey and then dismiss in the same press.
-            // 53 == Carbon kVK_Escape (same as KeymapEditorController.escapeKeyCode).
+            // While editing, swallow Escape so AppKit doesn't also treat it as cancel.
+            // 53 == Carbon kVK_Escape.
             if event.keyCode == 53, self?.isEditing == true {
                 return nil
             }
@@ -90,7 +96,7 @@ public final class InputRuntime: ObservableObject {
         }
 
         if globalKeyMonitor == nil {
-            InjectLogger.log(.capability, "global key monitor FAILED — enable Accessibility")
+            InjectLogger.log(.capability, "global key monitor FAILED — grant Accessibility access")
         } else {
             InjectLogger.log(.capability, "global+local key monitors started")
         }
@@ -246,6 +252,7 @@ public final class InputRuntime: ObservableObject {
 
     public func fireClick(relativeX: Double, relativeY: Double) {
         guard let target = TargetResolver.resolveFrontmost(relativeX: relativeX, relativeY: relativeY) else {
+            InjectLogger.log(.inject, "fireClick: no frontmost window")
             lastInjectSummary = "app=? resolve failed"
             lastInjectPosted = false
             return
@@ -356,8 +363,6 @@ public final class InputRuntime: ObservableObject {
         if event.isARepeat { return }
 
         let keyCode = event.keyCode
-        let chars = event.charactersIgnoringModifiers ?? ""
-        InjectLogger.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(chars.debugDescription)")
 
         if isEditing {
             let name = CarbonKeyNames.name(for: keyCode)
@@ -365,22 +370,14 @@ public final class InputRuntime: ObservableObject {
             return
         }
 
-        guard isEnabled else {
-            InjectLogger.log(.inject, "skip: disabled")
-            return
-        }
-        guard let targetBundleID else {
-            InjectLogger.log(.inject, "skip: no target bound")
-            return
-        }
-        guard let front = NSWorkspace.shared.frontmostApplication else {
-            InjectLogger.log(.inject, "skip: no frontmost app")
-            return
-        }
-        guard front.bundleIdentifier == targetBundleID else {
-            InjectLogger.log(.inject, "skip: frontmost=\(front.bundleIdentifier ?? "nil") target=\(targetBundleID)")
-            return
-        }
+        guard isEnabled else { return }
+        guard let targetBundleID else { return }
+        guard let front = NSWorkspace.shared.frontmostApplication,
+              front.bundleIdentifier == targetBundleID else { return }
+
+        // Only log key events when target app is frontmost (avoids flooding).
+        let chars = event.charactersIgnoringModifiers ?? ""
+        InjectLogger.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(chars.debugDescription)")
 
         let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
         guard mods.isEmpty else {
@@ -392,7 +389,7 @@ public final class InputRuntime: ObservableObject {
             InjectLogger.log(.inject, "skip: no binding for keyCode=\(keyCode) (bindings=\(keymap.runnableButtons.count))")
             return
         }
-        InjectLogger.log(.inject, "matched binding \(button.key.name) @ (\(button.transform.x),\(button.transform.y))")
+        InjectLogger.log(.inject, "matched \(button.key.name) @ (\(String(format: "%.3f,%.3f", button.transform.x, button.transform.y))) mode=\(injectMode.rawValue)")
         fireClick(relativeX: button.transform.x, relativeY: button.transform.y)
     }
 
@@ -438,6 +435,8 @@ public final class InputRuntime: ObservableObject {
         showMenuBarIcon = settings.showMenuBarIcon
         pendingInjectModeRaw = settings.injectModeRaw
         injectMode = InjectMode.resolvedProductMode(raw: settings.injectModeRaw, report: nil)
+        InjectLogger.log(.capability, "settings: mode=\(injectMode.rawValue) "
+            + "target=\(settings.lastTargetBundleID ?? "nil") enabled=\(isEnabled)")
         if let bundleID = settings.lastTargetBundleID {
             bind(bundleID: bundleID, appName: settings.lastTargetAppName)
         }

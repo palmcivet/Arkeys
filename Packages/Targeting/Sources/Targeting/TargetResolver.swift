@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import os
 
 public struct InjectionTarget: Sendable {
     public let pid: pid_t
@@ -16,6 +17,15 @@ public struct InjectionTarget: Sendable {
     /// App Store iPad app, etc.). These apps use UIKit's mouse-to-touch
     /// translation; only HID-stream events reach their touch pipeline.
     public let isIOSOnMac: Bool
+    /// True when the target is a Unity engine application. Unity games on
+    /// macOS ignore per-PID CGEvents; only HID-stream events reach their
+    /// input pipeline — same limitation as iOS-on-Mac targets.
+    public let isUnityApp: Bool
+
+    /// Whether this target requires HID-stream injection (cursor warp).
+    /// Covers iOS-on-Mac apps AND Unity games, both of which silently
+    /// ignore per-PID / SkyLight CGEvents.
+    public var requiresHID: Bool { isIOSOnMac || isUnityApp }
 
     public init(
         pid: pid_t,
@@ -25,7 +35,8 @@ public struct InjectionTarget: Sendable {
         windowID: CGWindowID?,
         clickPointAppKit: CGPoint,
         clickPointQuartz: CGPoint,
-        isIOSOnMac: Bool = false
+        isIOSOnMac: Bool = false,
+        isUnityApp: Bool = false
     ) {
         self.pid = pid
         self.appName = appName
@@ -35,6 +46,7 @@ public struct InjectionTarget: Sendable {
         self.clickPointAppKit = clickPointAppKit
         self.clickPointQuartz = clickPointQuartz
         self.isIOSOnMac = isIOSOnMac
+        self.isUnityApp = isUnityApp
     }
 }
 
@@ -46,25 +58,46 @@ public enum TargetResolver {
 
     /// `relativeX/Y` are fractions 0...1 from the window's top-left.
     public static func resolve(app: NSRunningApplication, relativeX: Double, relativeY: Double) -> InjectionTarget? {
-        guard let frame = primaryWindowFrame(for: app) else { return nil }
+        let appName = app.localizedName ?? "Unknown"
+        let bundleID = app.bundleIdentifier ?? "?"
         let pid = app.processIdentifier
+
+        guard let frame = primaryWindowFrame(for: app) else {
+            log("resolve FAILED: no window for \(appName) (\(bundleID)) pid=\(pid)")
+            return nil
+        }
+
         let clickAppKit = CGPoint(
             x: frame.origin.x + frame.size.width * relativeX,
             y: frame.origin.y + frame.size.height * (1.0 - relativeY)
         )
         let clickQuartz = appKitToQuartz(clickAppKit)
         let windowID = resolveWindowID(pid: pid, frame: frame)
+        let isIOS = detectIOSOnMac(app: app)
+        let isUnity = detectUnityApp(app: app)
+
+        log("resolve \(appName) pid=\(pid) "
+            + "window=\(Int(frame.width))×\(Int(frame.height)) id=\(windowID.map(String.init) ?? "nil") "
+            + "quartz=\(String(format: "%.1f,%.1f", clickQuartz.x, clickQuartz.y)) "
+            + "iOS=\(isIOS) unity=\(isUnity)")
 
         return InjectionTarget(
             pid: pid,
-            appName: app.localizedName ?? "Unknown",
+            appName: appName,
             bundleIdentifier: app.bundleIdentifier,
             windowFrame: frame,
             windowID: windowID,
             clickPointAppKit: clickAppKit,
             clickPointQuartz: clickQuartz,
-            isIOSOnMac: detectIOSOnMac(app: app)
+            isIOSOnMac: isIOS,
+            isUnityApp: isUnity
         )
+    }
+
+    private static let logger = Logger(subsystem: "palmcivet.arkeys", category: "target")
+
+    private static func log(_ message: String) {
+        logger.log("\(message, privacy: .public)")
     }
 
     /// Preferred window frame for overlays / injection (AppKit screen coords).
@@ -103,7 +136,7 @@ public enum TargetResolver {
         )
     }
 
-    // MARK: - iOS-on-Mac detection
+    // MARK: - App runtime detection (iOS-on-Mac, Unity)
 
     /// Detect whether the app is an iOS/iPadOS binary running on macOS.
     /// These apps use UIKit's mouse-to-touch translation layer; only events
@@ -112,7 +145,6 @@ public enum TargetResolver {
     private static func detectIOSOnMac(app: NSRunningApplication) -> Bool {
         guard let bundleURL = app.bundleURL else { return false }
 
-        // Try reading Info.plist from the running bundle location
         let plistURL = bundleURL.appendingPathComponent("Info.plist")
         if let plist = NSDictionary(contentsOf: plistURL) {
             if let platform = plist["DTPlatformName"] as? String,
@@ -125,9 +157,40 @@ public enum TargetResolver {
             }
         }
 
-        // PlayCover wraps iOS .app inside a Wrapper/ directory
         if bundleURL.path.contains("/Wrapper/") {
             return true
+        }
+
+        return false
+    }
+
+    /// Detect whether the app is a Unity game engine application.
+    /// Unity apps on macOS ignore per-PID CGEvents (`postToPid`, SkyLight);
+    /// only HID-stream events reach their input pipeline. Similar to
+    /// iOS-on-Mac, cascade mode must skip straight to HID for these targets.
+    private static func detectUnityApp(app: NSRunningApplication) -> Bool {
+        guard let bundleURL = app.bundleURL else { return false }
+        let fm = FileManager.default
+
+        let checks: [String] = [
+            "Contents/Frameworks/UnityPlayer.dylib",
+            "Contents/Frameworks/GameAssembly.dylib",
+            "Contents/Frameworks/libmonobdwgc-2.0.dylib",
+            "Contents/Frameworks/libil2cpp.dylib",
+        ]
+        for rel in checks {
+            if fm.fileExists(atPath: bundleURL.appendingPathComponent(rel).path) {
+                return true
+            }
+        }
+
+        let dataDirs = ["Contents/Resources/Data", "Contents/Data"]
+        for dir in dataDirs {
+            let base = bundleURL.appendingPathComponent(dir)
+            if fm.fileExists(atPath: base.appendingPathComponent("globalgamemanagers").path)
+                || fm.fileExists(atPath: base.appendingPathComponent("data.unity3d").path) {
+                return true
+            }
         }
 
         return false

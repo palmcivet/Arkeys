@@ -15,7 +15,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         lastTargetBundleID: String? = nil,
         lastTargetAppName: String? = nil,
         isEnabled: Bool = true,
-        injectModeRaw: String = "postToPid",
+        injectModeRaw: String = "cascade",
         preferMouseMovedBeforeHID: Bool = true,
         restoreCursorAfterHID: Bool = true,
         showMenuBarIcon: Bool = true
@@ -44,7 +44,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         lastTargetBundleID = try container.decodeIfPresent(String.self, forKey: .lastTargetBundleID)
         lastTargetAppName = try container.decodeIfPresent(String.self, forKey: .lastTargetAppName)
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
-        injectModeRaw = try container.decodeIfPresent(String.self, forKey: .injectModeRaw) ?? "postToPid"
+        injectModeRaw = try container.decodeIfPresent(String.self, forKey: .injectModeRaw) ?? "cascade"
         preferMouseMovedBeforeHID = try container.decodeIfPresent(Bool.self, forKey: .preferMouseMovedBeforeHID) ?? true
         restoreCursorAfterHID = try container.decodeIfPresent(Bool.self, forKey: .restoreCursorAfterHID) ?? true
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true

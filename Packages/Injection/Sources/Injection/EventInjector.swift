@@ -75,6 +75,15 @@ public final class EventInjector: @unchecked Sendable {
     public init() {}
 
     public func injectClick(mode: InjectMode, target: InjectionTarget) -> InjectResult {
+        InjectLogger.log(.inject, "injectClick \(mode.rawValue) → \(target.appName) pid=\(target.pid) "
+            + "quartz=\(String(format: "%.1f,%.1f", target.clickPointQuartz.x, target.clickPointQuartz.y)) "
+            + "requiresHID=\(target.requiresHID)")
+
+        if target.requiresHID && mode != .cascade && mode != .hidTap {
+            InjectLogger.log(.inject, "target requires HID but mode=\(mode.rawValue); "
+                + "Unity/iOS-on-Mac ignore per-PID events — switch to Automatic or Global HID")
+        }
+
         switch mode {
         case .postToPid:
             return runTimed(mode: mode) { _ in
@@ -98,6 +107,7 @@ public final class EventInjector: @unchecked Sendable {
     private func postToPidClick(target: InjectionTarget) -> (Bool, String) {
         guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
               let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
+            InjectLogger.log(.inject, "postToPid: FAILED to create targeted mouse events")
             return (false, "eventCreateFailed")
         }
         down.postToPid(target.pid)
@@ -107,10 +117,12 @@ public final class EventInjector: @unchecked Sendable {
 
     private func skyLightClick(target: InjectionTarget) -> (Bool, String) {
         guard SkyLightBridge.shared.isAvailable else {
+            InjectLogger.log(.inject, "skyLight: symbol unavailable, skip")
             return (false, "skyLightUnavailable")
         }
         guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
               let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
+            InjectLogger.log(.inject, "skyLight: FAILED to create targeted mouse events")
             return (false, "eventCreateFailed")
         }
         let okDown = SkyLightBridge.shared.post(down, to: target.pid)
@@ -142,24 +154,33 @@ public final class EventInjector: @unchecked Sendable {
 
         guard let down = makeHIDMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
               let up = makeHIDMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
+            InjectLogger.log(.inject, "hidTap: FAILED to create mouse events")
             return (false, "eventCreateFailed")
         }
 
         down.post(tap: .cghidEventTap)
 
-        // iOS-on-Mac apps (UIKit compat layer) need a realistic hold duration.
-        // CGEvent clicks complete in <1ms; UIScrollView's delaysContentTouches
-        // waits ~150ms. A 60ms hold is enough for button taps in most games.
-        if target.isIOSOnMac {
-            usleep(60_000)
+        // iOS-on-Mac and Unity apps need a realistic hold duration.
+        // CGEvent clicks complete in <1ms, but game engines process input
+        // in their main loop (16ms@60fps). Without a hold, the down/up
+        // arrives in the same frame and may be dropped.
+        // iOS-on-Mac: UIScrollView delaysContentTouches needs ~60ms.
+        // Unity: game loop input polling needs at least one full frame.
+        if target.requiresHID {
+            let holdUs: UInt32 = target.isIOSOnMac ? 60_000 : 50_000
+            usleep(holdUs)
+            notes.append("hold\(holdUs / 1000)ms")
         }
 
         up.post(tap: .cghidEventTap)
         notes.append("hidDownUp")
 
         if restoreCursorAfterHID {
-            if target.isIOSOnMac {
-                usleep(30_000)
+            // Delay before warping back so the target app's input pipeline
+            // has time to fully consume the click at the intended location.
+            if target.requiresHID {
+                let restoreDelayUs: UInt32 = target.isIOSOnMac ? 30_000 : 20_000
+                usleep(restoreDelayUs)
             }
             let restoreQuartz = TargetResolver.appKitToQuartz(cursorBefore)
             CGWarpMouseCursorPosition(restoreQuartz)
@@ -176,11 +197,13 @@ public final class EventInjector: @unchecked Sendable {
         let start = CFAbsoluteTimeGetCurrent()
         var steps: [String] = []
 
-        // iOS-on-Mac apps (UIKit touch pipeline) ignore postToPid/SkyLight CGEvents.
-        // Only events from the real HID stream reach their touch translation layer.
-        if target.isIOSOnMac {
+        // Apps that require HID-stream injection (iOS-on-Mac and Unity games)
+        // ignore per-PID / SkyLight CGEvents entirely. Skip straight to HID
+        // to avoid the false-positive "posted" from postToPid/SkyLight.
+        if target.requiresHID {
+            let reason = target.isIOSOnMac ? "iOSOnMac" : "unity"
             let hid = hidTapClick(target: target, cursorBefore: before)
-            steps.append(cascadeStep("hidTap(iOSOnMac)", hid))
+            steps.append(cascadeStep("hidTap(\(reason))", hid))
             return finishCascade(steps: steps, posted: hid.0, before: before, start: start)
         }
 

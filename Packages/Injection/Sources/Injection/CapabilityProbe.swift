@@ -12,7 +12,9 @@ public struct CapabilityReport: Sendable {
     public let sandboxEnabled: Bool
 
     public var summaryLine: String {
-        "[Arkeys][capability] os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") skyLight=SLEventPostToPid:\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") authMsg=\(authMessage ? "yes" : "no") sandbox=\(sandboxEnabled)"
+        "os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") "
+        + "skyLight=\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") "
+        + "sandbox=\(sandboxEnabled)"
     }
 }
 
@@ -43,7 +45,7 @@ public enum CapabilityProbe {
             authMessage: sky.hasAuthMessage,
             sandboxEnabled: sandbox
         )
-        print(report.summaryLine)
+        InjectLogger.log(.capability, report.summaryLine)
         return report
     }
 

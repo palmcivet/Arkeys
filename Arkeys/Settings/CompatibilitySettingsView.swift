@@ -41,7 +41,7 @@ struct CompatibilitySettingsView: View {
             } footer: {
                 SettingsFooter("compat.hid.footer")
             }
-            .disabled(runtime.injectMode != .hidTap)
+            .disabled(runtime.injectMode != .hidTap && runtime.injectMode != .cascade)
 
             Section {
                 LabeledContent("compat.permissions.ax") {

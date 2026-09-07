@@ -1,13 +1,19 @@
-.DS_store
+.DS_Store
 
-# App packaging
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.hmap
+
+# Build / package output
+.build/
+.swiftpm
+DerivedData/
+build/
+dist/
 *.ipa
 *.dSYM.zip
 *.dSYM
 
-.derivedData/
-xcuserdata/
-*.xcuserstate
-
-.build/
-dist/
+# Local scratch
+.tmp/

@@ -1,7 +1,6 @@
 import Foundation
 import AppKit
 import ApplicationServices
-import os
 
 public struct InjectionTarget: Sendable {
     public let pid: pid_t
@@ -94,10 +93,8 @@ public enum TargetResolver {
         )
     }
 
-    private static let logger = Logger(subsystem: "palmcivet.arkeys", category: "target")
-
     private static func log(_ message: String) {
-        logger.log("\(message, privacy: .public)")
+        AppLog.log(.target, message)
     }
 
     /// Preferred window frame for overlays / injection (AppKit screen coords).

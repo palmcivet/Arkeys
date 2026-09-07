@@ -1,6 +1,7 @@
 import Foundation
 import ApplicationServices
 import ObjectiveC
+import Targeting
 
 /// Soft-loads SkyLight private symbols. Never hard-link the framework.
 ///
@@ -50,7 +51,7 @@ public final class SkyLightBridge: @unchecked Sendable {
     @discardableResult
     public func post(_ event: CGEvent, to pid: pid_t) -> Bool {
         guard let postToPidFn else {
-            InjectLogger.log(.inject, "skyLightUnavailable symbol=SLEventPostToPid")
+            AppLog.log(.inject, "skyLightUnavailable symbol=SLEventPostToPid")
             return false
         }
         postToPidFn(pid, event)

@@ -1,6 +1,7 @@
 import Foundation
 import ApplicationServices
 import AppKit
+import Targeting
 
 public struct CapabilityReport: Sendable {
     public let osVersion: String
@@ -45,7 +46,7 @@ public enum CapabilityProbe {
             authMessage: sky.hasAuthMessage,
             sandboxEnabled: sandbox
         )
-        InjectLogger.log(.capability, report.summaryLine)
+        AppLog.log(.capability, report.summaryLine)
         return report
     }
 

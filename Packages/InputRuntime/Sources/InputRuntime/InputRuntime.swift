@@ -63,12 +63,12 @@ public final class InputRuntime: ObservableObject {
     public func startIfNeeded() {
         guard !didStart else { return }
         didStart = true
-        InjectLogger.log(.capability, "Arkeys starting (pid=\(ProcessInfo.processInfo.processIdentifier))")
+        AppLog.log(.capability, "starting (pid=\(ProcessInfo.processInfo.processIdentifier))")
         restoreSettings()
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         startMonitoring()
         startTrackingFrontmost()
-        InjectLogger.log(.capability, "ready: mode=\(injectMode.rawValue) target=\(targetBundleID ?? "nil") "
+        AppLog.log(.capability, "ready: mode=\(injectMode.rawValue) target=\(targetBundleID ?? "nil") "
             + "bindings=\(keymap.runnableButtons.count) globalMonitor=\(globalKeyMonitor != nil)")
     }
 
@@ -76,7 +76,7 @@ public final class InputRuntime: ObservableObject {
         stopMonitoring()
 
         let axTrusted = AXIsProcessTrusted()
-        InjectLogger.log(.capability, "startMonitoring: AXIsProcessTrusted=\(axTrusted)")
+        AppLog.log(.capability, "startMonitoring: AXIsProcessTrusted=\(axTrusted)")
 
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             Task { @MainActor in
@@ -96,9 +96,9 @@ public final class InputRuntime: ObservableObject {
         }
 
         if globalKeyMonitor == nil {
-            InjectLogger.log(.capability, "global key monitor FAILED — grant Accessibility access")
+            AppLog.log(.capability, "global key monitor FAILED — grant Accessibility access")
         } else {
-            InjectLogger.log(.capability, "global+local key monitors started")
+            AppLog.log(.capability, "global+local key monitors started")
         }
     }
 
@@ -116,11 +116,11 @@ public final class InputRuntime: ObservableObject {
     /// Bind a specific running app as the injection target (focus gate).
     public func bind(app: NSRunningApplication) {
         guard let bundleID = app.bundleIdentifier else {
-            InjectLogger.log(.target, "cannot bind — missing bundle id")
+            AppLog.log(.target, "cannot bind — missing bundle id")
             return
         }
         if bundleID == Bundle.main.bundleIdentifier {
-            InjectLogger.log(.target, "skip binding Arkeys itself")
+            AppLog.log(.target, "skip binding self")
             return
         }
         bind(bundleID: bundleID, appName: app.localizedName ?? bundleID)
@@ -128,21 +128,21 @@ public final class InputRuntime: ObservableObject {
 
     public func bind(bundleID: String, appName: String? = nil) {
         if bundleID == Bundle.main.bundleIdentifier {
-            InjectLogger.log(.target, "skip binding Arkeys itself")
+            AppLog.log(.target, "skip binding self")
             return
         }
         targetBundleID = bundleID
         targetAppName = appName ?? RunningAppCatalog.runningApplication(bundleID: bundleID)?.localizedName ?? bundleID
         reloadSchemesFromStore()
         persistSettings()
-        InjectLogger.log(.target, "bound target=\(targetAppName) id=\(bundleID)")
+        AppLog.log(.target, "bound target=\(targetAppName) id=\(bundleID)")
     }
 
     /// Create a blank Arkeys keymap scheme for the current target and persist it.
     @discardableResult
     public func createNewKeymap(name: String = "Untitled") -> Bool {
         guard let targetBundleID else {
-            InjectLogger.log(.target, "cannot create keymap — no target")
+            AppLog.log(.target, "cannot create keymap — no target")
             return false
         }
         let blank = CanonicalKeymap(targetHint: targetBundleID, source: .arkeys(version: "1.0.0"))
@@ -151,10 +151,10 @@ public final class InputRuntime: ObservableObject {
             activeSchemeID = meta.id
             keymap = blank
             refreshSchemesList()
-            InjectLogger.log(.target, "created new empty keymap for \(targetBundleID)")
+            AppLog.log(.target, "created new empty keymap for \(targetBundleID)")
             return true
         } catch {
-            InjectLogger.log(.target, "create failed: \(error.localizedDescription)")
+            AppLog.log(.target, "create failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -172,9 +172,9 @@ public final class InputRuntime: ObservableObject {
             if let loaded = store.load(bundleID: targetBundleID, schemeID: id) {
                 keymap = loaded
             }
-            InjectLogger.log(.target, "selected scheme \(id.uuidString)")
+            AppLog.log(.target, "selected scheme \(id.uuidString)")
         } catch {
-            InjectLogger.log(.target, "select scheme failed: \(error.localizedDescription)")
+            AppLog.log(.target, "select scheme failed: \(error.localizedDescription)")
         }
     }
 
@@ -186,7 +186,7 @@ public final class InputRuntime: ObservableObject {
             try store.rename(schemeID: id, bundleID: targetBundleID, name: trimmed)
             refreshSchemesList()
         } catch {
-            InjectLogger.log(.target, "rename failed: \(error.localizedDescription)")
+            AppLog.log(.target, "rename failed: \(error.localizedDescription)")
         }
     }
 
@@ -195,9 +195,9 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.save(keymap, bundleID: targetBundleID, schemeID: activeSchemeID)
             refreshSchemesList()
-            InjectLogger.log(.target, "saved keymap for \(targetBundleID) scheme=\(activeSchemeID)")
+            AppLog.log(.target, "saved keymap for \(targetBundleID) scheme=\(activeSchemeID)")
         } catch {
-            InjectLogger.log(.target, "save failed: \(error.localizedDescription)")
+            AppLog.log(.target, "save failed: \(error.localizedDescription)")
         }
     }
 
@@ -211,7 +211,7 @@ public final class InputRuntime: ObservableObject {
             targetAppName = RunningAppCatalog.runningApplication(bundleID: hint)?.localizedName ?? hint
         }
         guard let targetBundleID else {
-            InjectLogger.log(.target, "import failed — no target")
+            AppLog.log(.target, "import failed — no target")
             return
         }
         let name = suggestedName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
@@ -223,7 +223,7 @@ public final class InputRuntime: ObservableObject {
             refreshSchemesList()
             persistSettings()
         } catch {
-            InjectLogger.log(.target, "import save failed: \(error.localizedDescription)")
+            AppLog.log(.target, "import save failed: \(error.localizedDescription)")
         }
     }
 
@@ -237,9 +237,9 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.delete(schemeID: activeSchemeID, bundleID: targetBundleID)
             reloadSchemesFromStore()
-            InjectLogger.log(.target, "deleted scheme \(activeSchemeID)")
+            AppLog.log(.target, "deleted scheme \(activeSchemeID)")
         } catch {
-            InjectLogger.log(.target, "delete failed: \(error.localizedDescription)")
+            AppLog.log(.target, "delete failed: \(error.localizedDescription)")
         }
     }
 
@@ -252,7 +252,7 @@ public final class InputRuntime: ObservableObject {
 
     public func fireClick(relativeX: Double, relativeY: Double) {
         guard let target = TargetResolver.resolveFrontmost(relativeX: relativeX, relativeY: relativeY) else {
-            InjectLogger.log(.inject, "fireClick: no frontmost window")
+            AppLog.log(.inject, "fireClick: no frontmost window")
             lastInjectSummary = "app=? resolve failed"
             lastInjectPosted = false
             return
@@ -377,19 +377,19 @@ public final class InputRuntime: ObservableObject {
 
         // Only log key events when target app is frontmost (avoids flooding).
         let chars = event.charactersIgnoringModifiers ?? ""
-        InjectLogger.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(chars.debugDescription)")
+        AppLog.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(chars.debugDescription)")
 
         let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
         guard mods.isEmpty else {
-            InjectLogger.log(.inject, "skip: modifier held \(mods.rawValue)")
+            AppLog.log(.inject, "skip: modifier held \(mods.rawValue)")
             return
         }
 
         guard let button = keymap.button(matchingKeyCode: keyCode) else {
-            InjectLogger.log(.inject, "skip: no binding for keyCode=\(keyCode) (bindings=\(keymap.runnableButtons.count))")
+            AppLog.log(.inject, "skip: no binding for keyCode=\(keyCode) (bindings=\(keymap.runnableButtons.count))")
             return
         }
-        InjectLogger.log(.inject, "matched \(button.key.name) @ (\(String(format: "%.3f,%.3f", button.transform.x, button.transform.y))) mode=\(injectMode.rawValue)")
+        AppLog.log(.inject, "matched \(button.key.name) @ (\(String(format: "%.3f,%.3f", button.transform.x, button.transform.y))) mode=\(injectMode.rawValue)")
         fireClick(relativeX: button.transform.x, relativeY: button.transform.y)
     }
 
@@ -435,7 +435,7 @@ public final class InputRuntime: ObservableObject {
         showMenuBarIcon = settings.showMenuBarIcon
         pendingInjectModeRaw = settings.injectModeRaw
         injectMode = InjectMode.resolvedProductMode(raw: settings.injectModeRaw, report: nil)
-        InjectLogger.log(.capability, "settings: mode=\(injectMode.rawValue) "
+        AppLog.log(.capability, "settings: mode=\(injectMode.rawValue) "
             + "target=\(settings.lastTargetBundleID ?? "nil") enabled=\(isEnabled)")
         if let bundleID = settings.lastTargetBundleID {
             bind(bundleID: bundleID, appName: settings.lastTargetAppName)
@@ -456,7 +456,7 @@ public final class InputRuntime: ObservableObject {
         do {
             try settingsStore.save(settings)
         } catch {
-            InjectLogger.log(.target, "settings save failed: \(error.localizedDescription)")
+            AppLog.log(.target, "settings save failed: \(error.localizedDescription)")
         }
     }
 }

@@ -53,7 +53,7 @@ public struct InjectResult: Sendable {
     public let elapsedMs: Int
 
     public var summary: String {
-        let delta = InjectLogger.formatDelta(from: cursorBefore, to: cursorAfter)
+        let delta = AppLog.formatDelta(from: cursorBefore, to: cursorAfter)
         return "mode=\(mode.rawValue) result=\(posted ? "posted" : "failed") detail=\(detail) cursorDelta=\(delta) elapsedMs=\(elapsedMs)"
     }
 }
@@ -75,12 +75,12 @@ public final class EventInjector: @unchecked Sendable {
     public init() {}
 
     public func injectClick(mode: InjectMode, target: InjectionTarget) -> InjectResult {
-        InjectLogger.log(.inject, "injectClick \(mode.rawValue) → \(target.appName) pid=\(target.pid) "
+        AppLog.log(.inject, "injectClick \(mode.rawValue) → \(target.appName) pid=\(target.pid) "
             + "quartz=\(String(format: "%.1f,%.1f", target.clickPointQuartz.x, target.clickPointQuartz.y)) "
             + "requiresHID=\(target.requiresHID)")
 
         if target.requiresHID && mode != .cascade && mode != .hidTap {
-            InjectLogger.log(.inject, "target requires HID but mode=\(mode.rawValue); "
+            AppLog.log(.inject, "target requires HID but mode=\(mode.rawValue); "
                 + "Unity/iOS-on-Mac ignore per-PID events — switch to Automatic or Global HID")
         }
 
@@ -107,7 +107,7 @@ public final class EventInjector: @unchecked Sendable {
     private func postToPidClick(target: InjectionTarget) -> (Bool, String) {
         guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
               let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
-            InjectLogger.log(.inject, "postToPid: FAILED to create targeted mouse events")
+            AppLog.log(.inject, "postToPid: FAILED to create targeted mouse events")
             return (false, "eventCreateFailed")
         }
         down.postToPid(target.pid)
@@ -117,12 +117,12 @@ public final class EventInjector: @unchecked Sendable {
 
     private func skyLightClick(target: InjectionTarget) -> (Bool, String) {
         guard SkyLightBridge.shared.isAvailable else {
-            InjectLogger.log(.inject, "skyLight: symbol unavailable, skip")
+            AppLog.log(.inject, "skyLight: symbol unavailable, skip")
             return (false, "skyLightUnavailable")
         }
         guard let down = makeTargetedMouseEvent(type: .leftMouseDown, target: target),
               let up = makeTargetedMouseEvent(type: .leftMouseUp, target: target) else {
-            InjectLogger.log(.inject, "skyLight: FAILED to create targeted mouse events")
+            AppLog.log(.inject, "skyLight: FAILED to create targeted mouse events")
             return (false, "eventCreateFailed")
         }
         let okDown = SkyLightBridge.shared.post(down, to: target.pid)
@@ -154,7 +154,7 @@ public final class EventInjector: @unchecked Sendable {
 
         guard let down = makeHIDMouseEvent(type: .leftMouseDown, at: point, windowID: target.windowID),
               let up = makeHIDMouseEvent(type: .leftMouseUp, at: point, windowID: target.windowID) else {
-            InjectLogger.log(.inject, "hidTap: FAILED to create mouse events")
+            AppLog.log(.inject, "hidTap: FAILED to create mouse events")
             return (false, "eventCreateFailed")
         }
 
@@ -245,7 +245,7 @@ public final class EventInjector: @unchecked Sendable {
             cursorAfter: after,
             elapsedMs: elapsed
         )
-        InjectLogger.log(.inject, result.summary)
+        AppLog.log(.inject, result.summary)
         return result
     }
 
@@ -351,7 +351,7 @@ public final class EventInjector: @unchecked Sendable {
             cursorAfter: after,
             elapsedMs: elapsed
         )
-        InjectLogger.log(.inject, result.summary)
+        AppLog.log(.inject, result.summary)
         return result
     }
 }

@@ -41,7 +41,7 @@ public final class KeymapEditorController: ObservableObject {
         ensureOverlay()
         startFollowing()
         overlayWindow?.makeKeyAndOrderFront(nil)
-        InjectLog.editor("editor started for \(targetBundleID)")
+        AppLog.log(.editor, "editor started for \(targetBundleID)")
     }
 
     public func finish() {
@@ -49,7 +49,7 @@ public final class KeymapEditorController: ObservableObject {
         overlayWindow?.orderOut(nil)
         isActive = false
         onFinished?(keymap)
-        InjectLog.editor("editor finished")
+        AppLog.log(.editor, "editor finished")
     }
 
     public func cancel() {
@@ -57,7 +57,7 @@ public final class KeymapEditorController: ObservableObject {
         overlayWindow?.orderOut(nil)
         isActive = false
         onCancelled?()
-        InjectLog.editor("editor cancelled")
+        AppLog.log(.editor, "editor cancelled")
     }
 
     /// Escape / Cmd+.: discard immediately if clean; confirm when there are unsaved edits.
@@ -186,12 +186,6 @@ public final class KeymapEditorController: ObservableObject {
         }
         windowFrame = frame
         overlayWindow?.setFrame(frame, display: true)
-    }
-}
-
-private enum InjectLog {
-    static func editor(_ message: String) {
-        print("[Arkeys][editor] \(message)")
     }
 }
 

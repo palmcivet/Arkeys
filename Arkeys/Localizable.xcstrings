@@ -344,13 +344,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "macOS" } }
       }
     },
-    "compat.system.sandbox" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "App Sandbox" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "App Sandbox" } }
-      }
-    },
     "compat.on" : {
       "extractionState" : "manual",
       "localizations" : {

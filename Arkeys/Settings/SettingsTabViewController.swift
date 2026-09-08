@@ -22,7 +22,7 @@ final class SettingsTabViewController: NSTabViewController {
             switch self {
             case .general: return 380
             case .keymap: return 280
-            case .compatibility: return 640
+            case .compatibility: return 620
             case .about: return 140
             }
         }

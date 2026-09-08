@@ -10,12 +10,10 @@ public struct CapabilityReport: Sendable {
     public let skyLightPostToPid: Bool
     public let setWindowLocation: Bool
     public let authMessage: Bool
-    public let sandboxEnabled: Bool
 
     public var summaryLine: String {
         "os=\(osVersion) ax=\(accessibilityTrusted) tap=\(eventTapCreatable ? "ok" : "fail") "
-        + "skyLight=\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no") "
-        + "sandbox=\(sandboxEnabled)"
+        + "skyLight=\(skyLightPostToPid ? "yes" : "no") windowLoc=\(setWindowLocation ? "yes" : "no")"
     }
 }
 
@@ -35,7 +33,6 @@ public enum CapabilityProbe {
 
         let tapOK = canCreateKeyDownTap()
         let sky = SkyLightBridge.shared
-        let sandbox = isAppSandboxed()
 
         let report = CapabilityReport(
             osVersion: osVersion,
@@ -43,8 +40,7 @@ public enum CapabilityProbe {
             eventTapCreatable: tapOK,
             skyLightPostToPid: sky.isAvailable,
             setWindowLocation: sky.hasSetWindowLocation,
-            authMessage: sky.hasAuthMessage,
-            sandboxEnabled: sandbox
+            authMessage: sky.hasAuthMessage
         )
         AppLog.log(.capability, report.summaryLine)
         return report
@@ -64,10 +60,5 @@ public enum CapabilityProbe {
         }
         CFMachPortInvalidate(tap)
         return true
-    }
-
-    private static func isAppSandboxed() -> Bool {
-        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
-            || Bundle.main.object(forInfoDictionaryKey: "com.apple.security.app-sandbox") as? Bool == true
     }
 }

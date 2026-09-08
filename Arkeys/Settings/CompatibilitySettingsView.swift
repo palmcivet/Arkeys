@@ -60,10 +60,6 @@ struct CompatibilitySettingsView: View {
                     Text(runtime.capability?.osVersion ?? "—")
                         .foregroundStyle(.secondary)
                 }
-                LabeledContent("compat.system.sandbox") {
-                    Text(boolLabel(runtime.capability?.sandboxEnabled))
-                        .foregroundStyle(.secondary)
-                }
                 HStack {
                     Button("compat.permissions.grantPermission") {
                         runtime.openAccessibilitySettings()

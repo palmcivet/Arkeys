@@ -28,6 +28,9 @@ public final class InputRuntime: ObservableObject {
     @Published public var showMenuBarIcon: Bool = true {
         didSet { persistSettings() }
     }
+    @Published public var keymapButtonShape: KeymapButtonShape = .circle {
+        didSet { persistSettings() }
+    }
     @Published public var isEditing: Bool = false
     @Published public var capability: CapabilityReport?
     @Published public var lastInjectSummary: String = ""
@@ -444,6 +447,7 @@ public final class InputRuntime: ObservableObject {
         preferMouseMovedBeforeHID = settings.preferMouseMovedBeforeHID
         restoreCursorAfterHID = settings.restoreCursorAfterHID
         showMenuBarIcon = settings.showMenuBarIcon
+        keymapButtonShape = settings.keymapButtonShape
         pendingInjectModeRaw = settings.injectModeRaw
         injectMode = InjectMode.resolvedProductMode(raw: settings.injectModeRaw, report: nil)
         AppLog.log(.capability, "settings: mode=\(injectMode.rawValue) "
@@ -462,7 +466,8 @@ public final class InputRuntime: ObservableObject {
             injectModeRaw: injectMode.rawValue,
             preferMouseMovedBeforeHID: preferMouseMovedBeforeHID,
             restoreCursorAfterHID: restoreCursorAfterHID,
-            showMenuBarIcon: showMenuBarIcon
+            showMenuBarIcon: showMenuBarIcon,
+            keymapButtonShape: keymapButtonShape
         )
         do {
             try settingsStore.save(settings)

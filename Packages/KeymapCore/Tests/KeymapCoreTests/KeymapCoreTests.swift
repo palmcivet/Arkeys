@@ -75,7 +75,8 @@ final class KeymapCoreTests: XCTestCase {
             injectModeRaw: "hidTap",
             preferMouseMovedBeforeHID: false,
             restoreCursorAfterHID: true,
-            showMenuBarIcon: false
+            showMenuBarIcon: false,
+            keymapButtonShape: .rectangle
         )
         try store.save(settings)
         let loaded = store.load()
@@ -84,5 +85,21 @@ final class KeymapCoreTests: XCTestCase {
         XCTAssertFalse(loaded.isEnabled)
         XCTAssertFalse(loaded.preferMouseMovedBeforeHID)
         XCTAssertFalse(loaded.showMenuBarIcon)
+        XCTAssertEqual(loaded.keymapButtonShape, .rectangle)
+    }
+
+    func testAppSettingsDefaultsMissingButtonShapeToCircle() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathComponent("settings.json")
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let legacy = """
+        {"isEnabled":true,"injectModeRaw":"cascade","showMenuBarIcon":true}
+        """
+        try Data(legacy.utf8).write(to: url)
+        let loaded = AppSettingsStore(fileURL: url).load()
+        XCTAssertEqual(loaded.keymapButtonShape, .circle)
     }
 }

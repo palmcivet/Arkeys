@@ -16,6 +16,7 @@ public final class KeymapEditorController: ObservableObject {
     @Published public var keymap: CanonicalKeymap
     @Published public var selectedID: UUID?
     @Published public var isActive: Bool = false
+    @Published public var buttonShape: KeymapButtonShape = .circle
     @Published public var statusText: String = "Click empty area to add a button · drag to move · press a key to bind"
     @Published private var dragPreview: DragPreview?
 
@@ -396,17 +397,8 @@ public struct KeymapEditorCanvas: View {
 
     private func buttonNode(_ button: ButtonElement, in size: CGSize, dimmed: Bool) -> some View {
         let transform = controller.displayedTransform(for: button)
-        let diameter = max(36, size.width * transform.size)
         let selected = controller.selectedID == button.id
-        return Text(button.key.name)
-            .font(.system(size: 12, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-            .frame(width: diameter, height: diameter)
-            .background(
-                Circle()
-                    .fill(selected ? Color.accentColor.opacity(0.85) : Color.blue.opacity(dimmed ? 0.35 : 0.7))
-            )
-            .overlay(Circle().stroke(selected ? Color.white : Color.clear, lineWidth: 2))
+        return keycap(button.key.name, selected: selected, dimmed: dimmed)
             .position(
                 x: transform.x * size.width,
                 y: transform.y * size.height
@@ -431,15 +423,59 @@ public struct KeymapEditorCanvas: View {
     }
 
     private func unsupportedNode(id: UUID, label: String, transform: NormalizedTransform, in size: CGSize) -> some View {
-        let diameter = max(40, size.width * transform.size * 0.4)
-        return Text(label)
-            .font(.caption2)
-            .foregroundStyle(.white.opacity(0.8))
-            .frame(width: diameter, height: diameter)
-            .background(Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 1).background(Circle().fill(Color.gray.opacity(0.25))))
+        keycap(label, selected: false, dimmed: true)
             .position(x: transform.x * size.width, y: transform.y * size.height)
             .allowsHitTesting(false)
     }
+
+    private func keycap(_ title: String, selected: Bool, dimmed: Bool) -> some View {
+        let fill = dimmed
+            ? KeycapChrome.dimmedFill
+            : (selected ? KeycapChrome.selectedFill : KeycapChrome.fill)
+        let stroke = selected ? Color.white : Color.white.opacity(0.92)
+        return Text(title)
+            .font(.system(size: KeycapChrome.fontSize, weight: .regular))
+            .foregroundStyle(.white)
+            .minimumScaleFactor(0.6)
+            .lineLimit(1)
+            .padding(.horizontal, controller.buttonShape == .rectangle ? KeycapChrome.horizontalPadding : 0)
+            .padding(.vertical, controller.buttonShape == .rectangle ? KeycapChrome.verticalPadding : 0)
+            .frame(minWidth: KeycapChrome.minSide, minHeight: KeycapChrome.minSide)
+            .frame(
+                width: controller.buttonShape == .circle ? KeycapChrome.minSide : nil,
+                height: controller.buttonShape == .circle ? KeycapChrome.minSide : nil
+            )
+            .background(keyChrome(fill: fill, stroke: stroke, lineWidth: selected ? 1.5 : 1))
+            .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
+    }
+
+    @ViewBuilder
+    private func keyChrome(fill: Color, stroke: Color, lineWidth: CGFloat) -> some View {
+        switch controller.buttonShape {
+        case .circle:
+            Circle()
+                .fill(fill)
+                .overlay(Circle().stroke(stroke, lineWidth: lineWidth))
+        case .rectangle:
+            RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
+                .fill(fill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
+                        .stroke(stroke, lineWidth: lineWidth)
+                )
+        }
+    }
+}
+
+private enum KeycapChrome {
+    static let fontSize: CGFloat = 11
+    static let minSide: CGFloat = 22
+    static let horizontalPadding: CGFloat = 7
+    static let verticalPadding: CGFloat = 3
+    static let cornerRadius: CGFloat = 1
+    static let fill = Color(white: 0.22)
+    static let selectedFill = Color(white: 0.32)
+    static let dimmedFill = Color(white: 0.22).opacity(0.45)
 }
 
 private extension CGRect {

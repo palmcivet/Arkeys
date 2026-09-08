@@ -47,6 +47,14 @@ struct KeymapSettingsView: View {
             }
 
             Section {
+                Picker("keymap.buttonShape", selection: $runtime.keymapButtonShape) {
+                    Text("keymap.buttonShape.circle").tag(KeymapButtonShape.circle)
+                    Text("keymap.buttonShape.rectangle").tag(KeymapButtonShape.rectangle)
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Section {
                 HStack {
                     Button("keymap.new") { createNewScheme() }
                         .disabled(runtime.targetBundleID == nil || editor.isActive)
@@ -92,6 +100,10 @@ struct KeymapSettingsView: View {
         }
         .onAppear {
             wireEditorCallbacks()
+            editor.buttonShape = runtime.keymapButtonShape
+        }
+        .onChange(of: runtime.keymapButtonShape) { _, shape in
+            editor.buttonShape = shape
         }
     }
 
@@ -156,6 +168,7 @@ struct KeymapSettingsView: View {
         runtime.onEditorKeyDown = { [weak editor] code, name in
             editor?.bindKey(keyCode: code, name: name)
         }
+        editor.buttonShape = runtime.keymapButtonShape
         editor.start(targetBundleID: bundleID, keymap: runtime.keymap)
     }
 

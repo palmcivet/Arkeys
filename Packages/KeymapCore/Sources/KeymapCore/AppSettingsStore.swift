@@ -1,5 +1,11 @@
 import Foundation
 
+/// Overlay button chrome in the keymap editor.
+public enum KeymapButtonShape: String, Codable, CaseIterable, Sendable {
+    case circle
+    case rectangle
+}
+
 /// Persisted user preferences under Application Support/Arkeys/settings.json.
 public struct AppSettings: Codable, Hashable, Sendable {
     public var lastTargetBundleID: String?
@@ -10,6 +16,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var preferMouseMovedBeforeHID: Bool
     public var restoreCursorAfterHID: Bool
     public var showMenuBarIcon: Bool
+    public var keymapButtonShape: KeymapButtonShape
 
     public init(
         lastTargetBundleID: String? = nil,
@@ -18,7 +25,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         injectModeRaw: String = "cascade",
         preferMouseMovedBeforeHID: Bool = true,
         restoreCursorAfterHID: Bool = true,
-        showMenuBarIcon: Bool = true
+        showMenuBarIcon: Bool = true,
+        keymapButtonShape: KeymapButtonShape = .circle
     ) {
         self.lastTargetBundleID = lastTargetBundleID
         self.lastTargetAppName = lastTargetAppName
@@ -27,6 +35,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         self.preferMouseMovedBeforeHID = preferMouseMovedBeforeHID
         self.restoreCursorAfterHID = restoreCursorAfterHID
         self.showMenuBarIcon = showMenuBarIcon
+        self.keymapButtonShape = keymapButtonShape
     }
 
     enum CodingKeys: String, CodingKey {
@@ -37,6 +46,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         case preferMouseMovedBeforeHID
         case restoreCursorAfterHID
         case showMenuBarIcon
+        case keymapButtonShape
     }
 
     public init(from decoder: Decoder) throws {
@@ -48,6 +58,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         preferMouseMovedBeforeHID = try container.decodeIfPresent(Bool.self, forKey: .preferMouseMovedBeforeHID) ?? true
         restoreCursorAfterHID = try container.decodeIfPresent(Bool.self, forKey: .restoreCursorAfterHID) ?? true
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
+        keymapButtonShape = try container.decodeIfPresent(KeymapButtonShape.self, forKey: .keymapButtonShape) ?? .circle
     }
 }
 

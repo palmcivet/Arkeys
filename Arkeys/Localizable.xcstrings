@@ -288,6 +288,27 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请先选择目标应用" } }
       }
     },
+    "keymap.buttonShape" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Button Shape" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "按键形状" } }
+      }
+    },
+    "keymap.buttonShape.circle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Circle" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "圆形" } }
+      }
+    },
+    "keymap.buttonShape.rectangle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rectangle" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "矩形" } }
+      }
+    },
     "compat.route" : {
       "extractionState" : "manual",
       "localizations" : {

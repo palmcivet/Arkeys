@@ -87,9 +87,9 @@ public final class InputRuntime: ObservableObject {
             Task { @MainActor in
                 self?.handleKeyEvent(event, source: "local")
             }
-            // While editing, swallow Escape so AppKit doesn't also treat it as cancel.
-            // 53 == Carbon kVK_Escape.
-            if event.keyCode == 53, self?.isEditing == true {
+            // Swallow Escape while editing so AppKit does not treat it as cancel.
+            // Esc is a bindable key (e.g. game "back"), not an editor dismiss shortcut.
+            if event.keyCode == CarbonKeyNames.escapeKeyCode, self?.isEditing == true {
                 return nil
             }
             return event
@@ -349,6 +349,15 @@ public final class InputRuntime: ObservableObject {
         app.bundleIdentifier == Bundle.main.bundleIdentifier
     }
 
+    private var isTargetFrontmost: Bool {
+        guard let targetBundleID,
+              let target = RunningAppCatalog.runningApplication(bundleID: targetBundleID),
+              let front = NSWorkspace.shared.frontmostApplication else {
+            return false
+        }
+        return front.processIdentifier == target.processIdentifier
+    }
+
     private func applyCapability(_ report: CapabilityReport) {
         capability = report
         let raw = pendingInjectModeRaw ?? injectMode.rawValue
@@ -365,8 +374,10 @@ public final class InputRuntime: ObservableObject {
         let keyCode = event.keyCode
 
         if isEditing {
-            let name = CarbonKeyNames.name(for: keyCode)
-            onEditorKeyDown?(keyCode, name)
+            if isTargetFrontmost {
+                let name = CarbonKeyNames.name(for: keyCode)
+                onEditorKeyDown?(keyCode, name)
+            }
             return
         }
 

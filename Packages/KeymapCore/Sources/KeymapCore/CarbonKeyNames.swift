@@ -1,6 +1,9 @@
 import Foundation
 
 public enum CarbonKeyNames {
+    /// Carbon `kVK_Escape`.
+    public static let escapeKeyCode: UInt16 = 53
+
     public static func name(for keyCode: UInt16) -> String {
         names[keyCode] ?? "Key\(keyCode)"
     }

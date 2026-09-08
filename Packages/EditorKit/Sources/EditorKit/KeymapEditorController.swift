@@ -5,28 +5,29 @@ import Combine
 import KeymapCore
 import Targeting
 
+private struct DragPreview: Equatable {
+    var id: UUID
+    var x: Double
+    var y: Double
+}
+
 @MainActor
 public final class KeymapEditorController: ObservableObject {
-    /// Carbon `kVK_Escape`.
-    public static let escapeKeyCode: UInt16 = 53
-
     @Published public var keymap: CanonicalKeymap
     @Published public var selectedID: UUID?
     @Published public var isActive: Bool = false
-    @Published public var windowFrame: CGRect = .zero
     @Published public var statusText: String = "Click empty area to add a button · drag to move · press a key to bind"
+    @Published private var dragPreview: DragPreview?
 
     private var overlayWindow: NSWindow?
     private var followTimer: Timer?
+    private var activationObserver: NSObjectProtocol?
+    private var appActiveObserver: NSObjectProtocol?
     private var targetBundleID: String?
-    private var baselineKeymap: CanonicalKeymap = CanonicalKeymap()
-    private var isPromptingDiscard = false
+    private var lastOverlayFrame: CGRect?
+    private var isOverlayPresented = false
     public var onFinished: ((CanonicalKeymap) -> Void)?
     public var onCancelled: (() -> Void)?
-
-    public var hasUnsavedChanges: Bool {
-        keymap != baselineKeymap
-    }
 
     public init(keymap: CanonicalKeymap = CanonicalKeymap()) {
         self.keymap = keymap
@@ -35,63 +36,33 @@ public final class KeymapEditorController: ObservableObject {
     public func start(targetBundleID: String, keymap: CanonicalKeymap) {
         self.targetBundleID = targetBundleID
         self.keymap = keymap
-        self.baselineKeymap = keymap
         self.selectedID = nil
+        self.dragPreview = nil
+        self.lastOverlayFrame = nil
+        self.isOverlayPresented = false
         self.isActive = true
         ensureOverlay()
         startFollowing()
-        overlayWindow?.makeKeyAndOrderFront(nil)
+        activateTarget()
         AppLog.log(.editor, "editor started for \(targetBundleID)")
     }
 
     public func finish() {
         stopFollowing()
-        overlayWindow?.orderOut(nil)
+        hideOverlay()
         isActive = false
+        dragPreview = nil
         onFinished?(keymap)
         AppLog.log(.editor, "editor finished")
     }
 
     public func cancel() {
         stopFollowing()
-        overlayWindow?.orderOut(nil)
+        hideOverlay()
         isActive = false
+        dragPreview = nil
         onCancelled?()
         AppLog.log(.editor, "editor cancelled")
-    }
-
-    /// Escape / Cmd+.: discard immediately if clean; confirm when there are unsaved edits.
-    /// Explicit Cancel button calls `cancel()` directly — no second prompt (intentional dismiss).
-    public func requestCancel() {
-        guard isActive else { return }
-        guard hasUnsavedChanges else {
-            cancel()
-            return
-        }
-        guard !isPromptingDiscard else { return }
-        isPromptingDiscard = true
-
-        let alert = NSAlert()
-        alert.messageText = String(localized: "keymap.discard.title", bundle: .main)
-        alert.informativeText = String(localized: "keymap.discard.message", bundle: .main)
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: String(localized: "keymap.discard.confirm", bundle: .main))
-        alert.addButton(withTitle: String(localized: "keymap.discard.keepEditing", bundle: .main))
-
-        let response = alert.runModal()
-        isPromptingDiscard = false
-        if response == .alertFirstButtonReturn {
-            cancel()
-        }
-    }
-
-    /// Key events while editing: Escape cancels (with dirty check); other keys bind.
-    public func handleKeyDown(keyCode: UInt16, name: String) {
-        if keyCode == Self.escapeKeyCode {
-            requestCancel()
-            return
-        }
-        bindKey(keyCode: keyCode, name: name)
     }
 
     public func bindKey(keyCode: UInt16, name: String) {
@@ -124,14 +95,38 @@ public final class KeymapEditorController: ObservableObject {
         guard let selectedID else { return }
         keymap.removeElement(id: selectedID)
         self.selectedID = nil
+        dragPreview = nil
         statusText = "Deleted"
     }
 
-    public func updateTransform(id: UUID, x: Double, y: Double) {
+    func displayedTransform(for button: ButtonElement) -> NormalizedTransform {
+        if let dragPreview, dragPreview.id == button.id {
+            return NormalizedTransform(x: dragPreview.x, y: dragPreview.y, size: button.transform.size)
+        }
+        return button.transform
+    }
+
+    func previewDrag(id: UUID, x: Double, y: Double) {
+        if selectedID != id {
+            selectedID = id
+        }
+        let preview = DragPreview(id: id, x: min(max(x, 0), 1), y: min(max(y, 0), 1))
+        if dragPreview != preview {
+            dragPreview = preview
+        }
+    }
+
+    func endDrag() {
+        guard let dragPreview else { return }
+        applyTransform(id: dragPreview.id, x: dragPreview.x, y: dragPreview.y)
+        self.dragPreview = nil
+    }
+
+    private func applyTransform(id: UUID, x: Double, y: Double) {
         guard let idx = keymap.elements.firstIndex(where: { $0.id == id }),
               var button = keymap.elements[idx].buttonElement else { return }
-        button.transform.x = min(max(x, 0), 1)
-        button.transform.y = min(max(y, 0), 1)
+        button.transform.x = x
+        button.transform.y = y
         if case .draggableButton = keymap.elements[idx] {
             keymap.elements[idx] = .draggableButton(button)
         } else {
@@ -143,17 +138,18 @@ public final class KeymapEditorController: ObservableObject {
         if overlayWindow == nil {
             let window = EditorOverlayWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-                styleMask: .borderless,
+                styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
             )
-            window.editor = self
             window.isOpaque = false
             window.backgroundColor = .clear
             window.level = .floating
             window.ignoresMouseEvents = false
             window.hasShadow = false
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            window.hidesOnDeactivate = false
+            window.becomesKeyOnlyIfNeeded = true
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
             window.contentView = NSHostingView(rootView: KeymapEditorRootView(controller: self))
             overlayWindow = window
         }
@@ -161,41 +157,164 @@ public final class KeymapEditorController: ObservableObject {
 
     private func startFollowing() {
         followTimer?.invalidate()
-        // Track move/resize even while the editor overlay is key (target is not focused).
         let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.syncOverlayFrame()
+                self?.syncOverlayPresentation(fromActivation: false)
             }
         }
         RunLoop.main.add(timer, forMode: .common)
         followTimer = timer
-        syncOverlayFrame()
+
+        if activationObserver == nil {
+            activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didActivateApplicationNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.syncOverlayPresentation(fromActivation: true)
+                }
+            }
+        }
+        if appActiveObserver == nil {
+            appActiveObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.syncOverlayPresentation(fromActivation: true)
+                }
+            }
+        }
+
+        syncOverlayPresentation(fromActivation: false)
     }
 
     private func stopFollowing() {
         followTimer?.invalidate()
         followTimer = nil
+        if let activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+            self.activationObserver = nil
+        }
+        if let appActiveObserver {
+            NotificationCenter.default.removeObserver(appActiveObserver)
+            self.appActiveObserver = nil
+        }
     }
 
-    private func syncOverlayFrame() {
+    private func activateTarget() {
         guard let targetBundleID,
-              let app = NSRunningApplication.runningApplications(withBundleIdentifier: targetBundleID).first,
-              let frame = TargetResolver.primaryWindowFrame(for: app) else {
-            statusText = "Waiting for target window…"
+              let app = RunningAppCatalog.runningApplication(bundleID: targetBundleID) else {
             return
         }
-        windowFrame = frame
-        overlayWindow?.setFrame(frame, display: true)
+        _ = app.activate(from: .current, options: [.activateAllWindows])
+    }
+
+    /// Overlay presentation policy:
+    /// - Never become key / never activate Arkeys. Target stays frontmost so
+    ///   the game window does not hide, and keys arrive via the global monitor.
+    /// - Visible only while the target is the active app (above that window).
+    /// - Hidden when Settings or any other app is active, so the mask cannot
+    ///   cover those windows.
+    /// - If a click on the overlay still activates Arkeys, bounce focus back
+    ///   to the target. A click on Settings (or Cmd-Tab here) hides the mask.
+    private func syncOverlayPresentation(fromActivation: Bool) {
+        guard isActive else { return }
+        guard let targetBundleID,
+              let app = RunningAppCatalog.runningApplication(bundleID: targetBundleID),
+              let frame = TargetResolver.primaryWindowFrame(for: app) else {
+            if statusText != "Waiting for target window…" {
+                statusText = "Waiting for target window…"
+            }
+            hideOverlay()
+            return
+        }
+
+        let front = NSWorkspace.shared.frontmostApplication
+        if front?.processIdentifier == app.processIdentifier {
+            revealOverlay(at: frame)
+            return
+        }
+
+        // Overlay click may activate Arkeys. Keep the mask up and bounce
+        // focus back to the target so the game window does not hide.
+        if isSelf(front), shouldReturnFocusToTarget() {
+            if overlayWindow?.isVisible == true {
+                moveOverlay(to: frame)
+            }
+            if fromActivation {
+                activateTarget()
+            }
+            return
+        }
+
+        hideOverlay()
+    }
+
+    private func revealOverlay(at frame: NSRect) {
+        guard let overlayWindow else { return }
+        if overlayWindow.level != .floating {
+            overlayWindow.level = .floating
+        }
+        moveOverlay(to: frame)
+        // `setFrame(display: true)` can flip `isVisible` without bringing the
+        // panel above the target — do not use it as the raise signal.
+        if !isOverlayPresented {
+            overlayWindow.orderFrontRegardless()
+            isOverlayPresented = true
+        }
+    }
+
+    private func moveOverlay(to frame: NSRect) {
+        guard let overlayWindow else { return }
+        if let lastOverlayFrame, lastOverlayFrame.nearlyEqual(frame) {
+            return
+        }
+        overlayWindow.setFrame(frame, display: true)
+        lastOverlayFrame = frame
+    }
+
+    private func hideOverlay() {
+        lastOverlayFrame = nil
+        isOverlayPresented = false
+        guard let overlayWindow, overlayWindow.isVisible else { return }
+        overlayWindow.orderOut(nil)
+    }
+
+    private func isSelf(_ app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+        if let bundleID = app.bundleIdentifier, bundleID == Bundle.main.bundleIdentifier {
+            return true
+        }
+        return app.processIdentifier == ProcessInfo.processInfo.processIdentifier
+    }
+
+    /// True when Arkeys was activated by interacting with the overlay, not Settings.
+    private func shouldReturnFocusToTarget() -> Bool {
+        guard let overlayWindow else { return false }
+        if NSApp.currentEvent?.window === overlayWindow {
+            return true
+        }
+        if NSApp.currentEvent?.window != nil {
+            return false
+        }
+        let mouse = NSEvent.mouseLocation
+        guard overlayWindow.frame.contains(mouse) else { return false }
+        return !NSApp.windows.contains { window in
+            window !== overlayWindow && window.isVisible && window.frame.contains(mouse)
+        }
     }
 }
 
-/// Borderless editor surface: Esc / Cmd+. → discard confirm, not silent close.
-private final class EditorOverlayWindow: NSWindow {
-    weak var editor: KeymapEditorController?
+/// Non-activating editor surface: never steals focus from the target.
+/// Esc is a bindable key — dismiss only via Cancel / Done.
+private final class EditorOverlayWindow: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
 
-    override func cancelOperation(_ sender: Any?) {
-        editor?.requestCancel()
-    }
+    override func cancelOperation(_ sender: Any?) {}
 }
 
 struct KeymapEditorRootView: View {
@@ -276,7 +395,8 @@ public struct KeymapEditorCanvas: View {
     }
 
     private func buttonNode(_ button: ButtonElement, in size: CGSize, dimmed: Bool) -> some View {
-        let diameter = max(36, size.width * button.transform.size)
+        let transform = controller.displayedTransform(for: button)
+        let diameter = max(36, size.width * transform.size)
         let selected = controller.selectedID == button.id
         return Text(button.key.name)
             .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -288,16 +408,20 @@ public struct KeymapEditorCanvas: View {
             )
             .overlay(Circle().stroke(selected ? Color.white : Color.clear, lineWidth: 2))
             .position(
-                x: button.transform.x * size.width,
-                y: button.transform.y * size.height
+                x: transform.x * size.width,
+                y: transform.y * size.height
             )
             .gesture(
                 DragGesture(minimumDistance: 2, coordinateSpace: .named("keymapCanvas"))
                     .onChanged { value in
-                        controller.selectedID = button.id
-                        let nx = value.location.x / size.width
-                        let ny = value.location.y / size.height
-                        controller.updateTransform(id: button.id, x: nx, y: ny)
+                        controller.previewDrag(
+                            id: button.id,
+                            x: value.location.x / size.width,
+                            y: value.location.y / size.height
+                        )
+                    }
+                    .onEnded { _ in
+                        controller.endDrag()
                     }
             )
             .onTapGesture {
@@ -315,5 +439,14 @@ public struct KeymapEditorCanvas: View {
             .background(Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 1).background(Circle().fill(Color.gray.opacity(0.25))))
             .position(x: transform.x * size.width, y: transform.y * size.height)
             .allowsHitTesting(false)
+    }
+}
+
+private extension CGRect {
+    func nearlyEqual(_ other: CGRect) -> Bool {
+        abs(origin.x - other.origin.x) < 0.5
+            && abs(origin.y - other.origin.y) < 0.5
+            && abs(width - other.width) < 0.5
+            && abs(height - other.height) < 0.5
     }
 }

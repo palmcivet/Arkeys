@@ -154,7 +154,7 @@ struct KeymapSettingsView: View {
         wireEditorCallbacks()
         runtime.isEditing = true
         runtime.onEditorKeyDown = { [weak editor] code, name in
-            editor?.handleKeyDown(keyCode: code, name: name)
+            editor?.bindKey(keyCode: code, name: name)
         }
         editor.start(targetBundleID: bundleID, keymap: runtime.keymap)
     }

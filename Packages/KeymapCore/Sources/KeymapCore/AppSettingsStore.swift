@@ -17,6 +17,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var restoreCursorAfterHID: Bool
     public var showMenuBarIcon: Bool
     public var keymapButtonShape: KeymapButtonShape
+    public var showKeymapOverlay: Bool
 
     public init(
         lastTargetBundleID: String? = nil,
@@ -26,7 +27,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         preferMouseMovedBeforeHID: Bool = true,
         restoreCursorAfterHID: Bool = true,
         showMenuBarIcon: Bool = true,
-        keymapButtonShape: KeymapButtonShape = .circle
+        keymapButtonShape: KeymapButtonShape = .circle,
+        showKeymapOverlay: Bool = false
     ) {
         self.lastTargetBundleID = lastTargetBundleID
         self.lastTargetAppName = lastTargetAppName
@@ -36,6 +38,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         self.restoreCursorAfterHID = restoreCursorAfterHID
         self.showMenuBarIcon = showMenuBarIcon
         self.keymapButtonShape = keymapButtonShape
+        self.showKeymapOverlay = showKeymapOverlay
     }
 
     enum CodingKeys: String, CodingKey {
@@ -47,6 +50,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         case restoreCursorAfterHID
         case showMenuBarIcon
         case keymapButtonShape
+        case showKeymapOverlay
     }
 
     public init(from decoder: Decoder) throws {
@@ -59,6 +63,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         restoreCursorAfterHID = try container.decodeIfPresent(Bool.self, forKey: .restoreCursorAfterHID) ?? true
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
         keymapButtonShape = try container.decodeIfPresent(KeymapButtonShape.self, forKey: .keymapButtonShape) ?? .circle
+        showKeymapOverlay = try container.decodeIfPresent(Bool.self, forKey: .showKeymapOverlay) ?? false
     }
 }
 

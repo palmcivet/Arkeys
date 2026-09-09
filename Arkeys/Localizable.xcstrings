@@ -64,6 +64,13 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出" } }
       }
     },
+    "menu.showOverlay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Shortcuts" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示快捷键" } }
+      }
+    },
     "menu.noSchemes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -286,6 +293,20 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a target app first" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请先选择目标应用" } }
+      }
+    },
+    "keymap.showOverlay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Always Show Shortcuts" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "始终显示快捷键" } }
+      }
+    },
+    "keymap.showOverlay.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keeps faded key labels on the target window. Hidden while editing." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在目标窗口上以较淡的样式持续显示按键，编辑时会暂时隐藏。" } }
       }
     },
     "keymap.buttonShape" : {

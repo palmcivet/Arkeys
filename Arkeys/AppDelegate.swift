@@ -2,11 +2,13 @@ import Cocoa
 import Combine
 import SwiftUI
 import InputRuntime
+import EditorKit
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private(set) var runtime: InputRuntime?
     private let statusItemController = StatusItemController()
+    private let keymapHUD = KeymapHUDController()
     private var settingsWindow: NSWindow?
     private var overlayWindow: NSWindow?
     private var isSettingsVisible = false
@@ -38,6 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .store(in: &cancellables)
 
         runtime.startIfNeeded()
+        bindKeymapHUD(runtime)
         refreshActivationPolicy()
 
         setupOverlayWindow()
@@ -75,6 +78,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         refreshActivationPolicy()
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    private func bindKeymapHUD(_ runtime: InputRuntime) {
+        runtime.$keymap
+            .combineLatest(runtime.$keymapButtonShape)
+            .sink { [weak self] keymap, shape in
+                self?.keymapHUD.updateAppearance(keymap: keymap, buttonShape: shape)
+            }
+            .store(in: &cancellables)
+
+        runtime.$showKeymapOverlay
+            .combineLatest(runtime.$isEditing, runtime.$targetBundleID)
+            .sink { [weak self] show, editing, bundleID in
+                if show, !editing, let bundleID {
+                    self?.keymapHUD.start(targetBundleID: bundleID)
+                } else {
+                    self?.keymapHUD.stop()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     /// Dock while Settings is open (or menu-bar icon is hidden); otherwise menu-bar agent.

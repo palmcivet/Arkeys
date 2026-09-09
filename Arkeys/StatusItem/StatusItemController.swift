@@ -76,6 +76,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         toggle.state = runtime.isEnabled ? .on : .off
         menu.addItem(toggle)
 
+        let overlay = NSMenuItem(
+            title: String(localized: "menu.showOverlay"),
+            action: #selector(toggleShowOverlay),
+            keyEquivalent: ""
+        )
+        overlay.target = self
+        overlay.state = runtime.showKeymapOverlay ? .on : .off
+        menu.addItem(overlay)
+
         let schemeRoot = NSMenuItem(
             title: String(localized: "menu.scheme"),
             action: nil,
@@ -129,6 +138,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func toggleEnabled() {
         runtime?.isEnabled.toggle()
+    }
+
+    @objc private func toggleShowOverlay() {
+        runtime?.showKeymapOverlay.toggle()
     }
 
     @objc private func selectScheme(_ sender: NSMenuItem) {

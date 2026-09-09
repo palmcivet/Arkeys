@@ -76,7 +76,8 @@ final class KeymapCoreTests: XCTestCase {
             preferMouseMovedBeforeHID: false,
             restoreCursorAfterHID: true,
             showMenuBarIcon: false,
-            keymapButtonShape: .rectangle
+            keymapButtonShape: .rectangle,
+            showKeymapOverlay: true
         )
         try store.save(settings)
         let loaded = store.load()
@@ -86,9 +87,10 @@ final class KeymapCoreTests: XCTestCase {
         XCTAssertFalse(loaded.preferMouseMovedBeforeHID)
         XCTAssertFalse(loaded.showMenuBarIcon)
         XCTAssertEqual(loaded.keymapButtonShape, .rectangle)
+        XCTAssertTrue(loaded.showKeymapOverlay)
     }
 
-    func testAppSettingsDefaultsMissingButtonShapeToCircle() throws {
+    func testAppSettingsDefaultsMissingOptionalFields() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathComponent("settings.json")
@@ -101,5 +103,6 @@ final class KeymapCoreTests: XCTestCase {
         try Data(legacy.utf8).write(to: url)
         let loaded = AppSettingsStore(fileURL: url).load()
         XCTAssertEqual(loaded.keymapButtonShape, .circle)
+        XCTAssertFalse(loaded.showKeymapOverlay)
     }
 }

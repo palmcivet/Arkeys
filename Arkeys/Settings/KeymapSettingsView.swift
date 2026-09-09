@@ -47,6 +47,12 @@ struct KeymapSettingsView: View {
             }
 
             Section {
+                Toggle("keymap.showOverlay", isOn: $runtime.showKeymapOverlay)
+            } footer: {
+                SettingsFooter("keymap.showOverlay.footer")
+            }
+
+            Section {
                 Picker("keymap.buttonShape", selection: $runtime.keymapButtonShape) {
                     Text("keymap.buttonShape.circle").tag(KeymapButtonShape.circle)
                     Text("keymap.buttonShape.rectangle").tag(KeymapButtonShape.rectangle)

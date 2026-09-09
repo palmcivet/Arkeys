@@ -256,9 +256,6 @@ public final class KeymapEditorController: ObservableObject {
 
     private func revealOverlay(at frame: NSRect) {
         guard let overlayWindow else { return }
-        if overlayWindow.level != .floating {
-            overlayWindow.level = .floating
-        }
         moveOverlay(to: frame)
         // `setFrame(display: true)` can flip `isVisible` without bringing the
         // panel above the target — do not use it as the raise signal.
@@ -398,7 +395,11 @@ public struct KeymapEditorCanvas: View {
     private func buttonNode(_ button: ButtonElement, in size: CGSize, dimmed: Bool) -> some View {
         let transform = controller.displayedTransform(for: button)
         let selected = controller.selectedID == button.id
-        return keycap(button.key.name, selected: selected, dimmed: dimmed)
+        return KeymapKeycap(
+            title: button.key.name,
+            shape: controller.buttonShape,
+            style: dimmed ? .dimmed : (selected ? .selected : .normal)
+        )
             .position(
                 x: transform.x * size.width,
                 y: transform.y * size.height
@@ -423,66 +424,9 @@ public struct KeymapEditorCanvas: View {
     }
 
     private func unsupportedNode(id: UUID, label: String, transform: NormalizedTransform, in size: CGSize) -> some View {
-        keycap(label, selected: false, dimmed: true)
+        KeymapKeycap(title: label, shape: controller.buttonShape, style: .dimmed)
             .position(x: transform.x * size.width, y: transform.y * size.height)
             .allowsHitTesting(false)
     }
 
-    private func keycap(_ title: String, selected: Bool, dimmed: Bool) -> some View {
-        let fill = dimmed
-            ? KeycapChrome.dimmedFill
-            : (selected ? KeycapChrome.selectedFill : KeycapChrome.fill)
-        let stroke = selected ? Color.white : Color.white.opacity(0.92)
-        return Text(title)
-            .font(.system(size: KeycapChrome.fontSize, weight: .regular))
-            .foregroundStyle(.white)
-            .minimumScaleFactor(0.6)
-            .lineLimit(1)
-            .padding(.horizontal, controller.buttonShape == .rectangle ? KeycapChrome.horizontalPadding : 0)
-            .padding(.vertical, controller.buttonShape == .rectangle ? KeycapChrome.verticalPadding : 0)
-            .frame(minWidth: KeycapChrome.minSide, minHeight: KeycapChrome.minSide)
-            .frame(
-                width: controller.buttonShape == .circle ? KeycapChrome.minSide : nil,
-                height: controller.buttonShape == .circle ? KeycapChrome.minSide : nil
-            )
-            .background(keyChrome(fill: fill, stroke: stroke, lineWidth: selected ? 1.5 : 1))
-            .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
-    }
-
-    @ViewBuilder
-    private func keyChrome(fill: Color, stroke: Color, lineWidth: CGFloat) -> some View {
-        switch controller.buttonShape {
-        case .circle:
-            Circle()
-                .fill(fill)
-                .overlay(Circle().stroke(stroke, lineWidth: lineWidth))
-        case .rectangle:
-            RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
-                .fill(fill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
-                        .stroke(stroke, lineWidth: lineWidth)
-                )
-        }
-    }
-}
-
-private enum KeycapChrome {
-    static let fontSize: CGFloat = 11
-    static let minSide: CGFloat = 22
-    static let horizontalPadding: CGFloat = 7
-    static let verticalPadding: CGFloat = 3
-    static let cornerRadius: CGFloat = 1
-    static let fill = Color(white: 0.22)
-    static let selectedFill = Color(white: 0.32)
-    static let dimmedFill = Color(white: 0.22).opacity(0.45)
-}
-
-private extension CGRect {
-    func nearlyEqual(_ other: CGRect) -> Bool {
-        abs(origin.x - other.origin.x) < 0.5
-            && abs(origin.y - other.origin.y) < 0.5
-            && abs(width - other.width) < 0.5
-            && abs(height - other.height) < 0.5
-    }
 }

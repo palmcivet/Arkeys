@@ -21,7 +21,7 @@ final class SettingsTabViewController: NSTabViewController {
         var contentHeight: CGFloat {
             switch self {
             case .general: return 380
-            case .keymap: return 280
+            case .keymap: return 360
             case .compatibility: return 620
             case .about: return 140
             }

@@ -78,6 +78,27 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无方案" } }
       }
     },
+    "menu.editor.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "完成" } }
+      }
+    },
+    "menu.editor.cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+      }
+    },
+    "menu.editing.tooltip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Editing keymap — Done / Cancel in this menu" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在编辑键位 — 在此菜单中完成或取消" } }
+      }
+    },
     "general.enabled" : {
       "extractionState" : "manual",
       "localizations" : {

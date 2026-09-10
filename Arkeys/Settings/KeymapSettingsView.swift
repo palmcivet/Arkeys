@@ -3,11 +3,10 @@ import UniformTypeIdentifiers
 import KeymapCore
 import KeymapPlayCover
 import InputRuntime
-import EditorKit
 
 struct KeymapSettingsView: View {
     @EnvironmentObject private var runtime: InputRuntime
-    @StateObject private var editor = KeymapEditorController()
+    var session: EditorSession
     @State private var importError: String?
     @State private var statusMessage: String?
     @State private var isImporting = false
@@ -39,7 +38,7 @@ struct KeymapSettingsView: View {
                         }
                     }
                     .pickerStyle(.menu)
-                    .disabled(editor.isActive)
+                    .disabled(runtime.isEditing)
 
                     Text(schemeSummaryText)
                         .foregroundStyle(.secondary)
@@ -63,15 +62,15 @@ struct KeymapSettingsView: View {
             Section {
                 HStack {
                     Button("keymap.new") { createNewScheme() }
-                        .disabled(runtime.targetBundleID == nil || editor.isActive)
+                        .disabled(runtime.targetBundleID == nil || runtime.isEditing)
                     Button("keymap.edit") { beginEdit() }
-                        .disabled(runtime.activeSchemeID == nil || editor.isActive)
+                        .disabled(runtime.activeSchemeID == nil || runtime.isEditing)
                     Button("keymap.import") { isImporting = true }
-                        .disabled(runtime.targetBundleID == nil || editor.isActive)
+                        .disabled(runtime.targetBundleID == nil || runtime.isEditing)
                     Button("keymap.export") { prepareExport() }
-                        .disabled(runtime.activeSchemeID == nil || editor.isActive)
+                        .disabled(runtime.activeSchemeID == nil || runtime.isEditing)
                     Button("keymap.delete", role: .destructive) { deleteActiveScheme() }
-                        .disabled(runtime.activeSchemeID == nil || editor.isActive)
+                        .disabled(runtime.activeSchemeID == nil || runtime.isEditing)
                 }
                 if let importError {
                     Text(importError)
@@ -105,11 +104,9 @@ struct KeymapSettingsView: View {
             }
         }
         .onAppear {
-            wireEditorCallbacks()
-            editor.buttonShape = runtime.keymapButtonShape
-        }
-        .onChange(of: runtime.keymapButtonShape) { _, shape in
-            editor.buttonShape = shape
+            session.onSaved = {
+                statusMessage = String(localized: "keymap.saved")
+            }
         }
     }
 
@@ -136,20 +133,6 @@ struct KeymapSettingsView: View {
         }
     }
 
-    private func wireEditorCallbacks() {
-        editor.onFinished = { map in
-            runtime.keymap = map
-            runtime.saveKeymap()
-            runtime.isEditing = false
-            runtime.onEditorKeyDown = nil
-            statusMessage = String(localized: "keymap.saved")
-        }
-        editor.onCancelled = {
-            runtime.isEditing = false
-            runtime.onEditorKeyDown = nil
-        }
-    }
-
     private func createNewScheme() {
         let name = nextUntitledSchemeName()
         guard runtime.createNewKeymap(name: name) else {
@@ -168,14 +151,7 @@ struct KeymapSettingsView: View {
     }
 
     private func beginEdit() {
-        guard let bundleID = runtime.targetBundleID, runtime.activeSchemeID != nil else { return }
-        wireEditorCallbacks()
-        runtime.isEditing = true
-        runtime.onEditorKeyDown = { [weak editor] code, name in
-            editor?.bindKey(keyCode: code, name: name)
-        }
-        editor.buttonShape = runtime.keymapButtonShape
-        editor.start(targetBundleID: bundleID, keymap: runtime.keymap)
+        session.start()
     }
 
     private func prepareExport() {

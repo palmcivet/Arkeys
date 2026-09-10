@@ -8,6 +8,7 @@ import EditorKit
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private(set) var runtime: InputRuntime?
     private let statusItemController = StatusItemController()
+    private let editorSession = EditorSession()
     private let keymapHUD = KeymapHUDController()
     private var settingsWindow: NSWindow?
     private var overlayWindow: NSWindow?
@@ -27,10 +28,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let runtime = InputRuntime()
         self.runtime = runtime
 
+        editorSession.attach(runtime: runtime)
+        editorSession.controller.shouldHideForHostUI = { [weak self] in
+            self?.isSettingsVisible == true
+        }
+
         statusItemController.onOpenSettings = { [weak self] in
             self?.openSettings()
         }
-        statusItemController.attach(runtime: runtime)
+        statusItemController.attach(runtime: runtime, editorSession: editorSession)
 
         runtime.$showMenuBarIcon
             .receive(on: RunLoop.main)
@@ -65,7 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let runtime else { return }
 
         if settingsWindow == nil {
-            let tabs = SettingsTabViewController(runtime: runtime)
+            let tabs = SettingsTabViewController(runtime: runtime, editorSession: editorSession)
             let initialHeight = SettingsTabViewController.Pane.general.contentHeight
 
             // Preference window: titled + closable. Width fixed; height follows selected pane.
@@ -111,6 +117,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if editorSession.controller.isActive {
+            editorSession.cancel()
+        }
+        return .terminateNow
     }
 
     /// Dock while Settings is open (or menu-bar icon is hidden); otherwise menu-bar agent.

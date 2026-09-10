@@ -19,7 +19,9 @@ public final class KeymapEditorController: ObservableObject {
     @Published public var isActive: Bool = false
     @Published public var buttonShape: KeymapButtonShape = .circle
     @Published public var statusText: String = KeymapEditorController.idleStatus
+    @Published var chromeEdge: EditorChromeEdge = .bottom
     @Published private var dragPreview: DragPreview?
+    public var chromeCopy = EditorChromeCopy.english
 
     private var overlayWindow: NSWindow?
     private var followTimer: Timer?
@@ -28,10 +30,24 @@ public final class KeymapEditorController: ObservableObject {
     private var targetBundleID: String?
     private var lastOverlayFrame: CGRect?
     private var isOverlayPresented = false
+    private var canvasSize: CGSize = .zero
+    var chromeBarSize: CGSize = EditorChromeDodge.estimatedBarSize
+
     public var onFinished: ((CanonicalKeymap) -> Void)?
     public var onCancelled: (() -> Void)?
+    /// True while the host status-item menu is open. Keep the overlay up and
+    /// do not bounce focus back to the target (that would dismiss the menu).
+    public var isStatusMenuTracking = false {
+        didSet {
+            guard isActive, oldValue != isStatusMenuTracking else { return }
+            syncOverlayPresentation(fromActivation: false)
+        }
+    }
+    /// Host Settings (or other Arkeys UI) is key — hide so the mask cannot cover it.
+    public var shouldHideForHostUI: () -> Bool = { false }
 
-    static let idleStatus = "Click empty area to add · click a key to select · drag to move"
+    static let idleStatus = "Click empty area to add"
+    private static let waitingStatus = "Waiting for target window…"
 
     public init(keymap: CanonicalKeymap = CanonicalKeymap()) {
         self.keymap = keymap
@@ -42,10 +58,13 @@ public final class KeymapEditorController: ObservableObject {
         self.keymap = keymap
         self.selectedID = nil
         self.dragPreview = nil
-        self.statusText = Self.idleStatus
+        self.chromeEdge = .bottom
         self.lastOverlayFrame = nil
         self.isOverlayPresented = false
+        self.canvasSize = .zero
+        self.chromeBarSize = EditorChromeDodge.estimatedBarSize
         self.isActive = true
+        setStatus(Self.idleStatus)
         ensureOverlay()
         startFollowing()
         activateTarget()
@@ -53,31 +72,25 @@ public final class KeymapEditorController: ObservableObject {
     }
 
     public func finish() {
-        stopFollowing()
-        hideOverlay()
-        isActive = false
-        dragPreview = nil
+        endSession()
         onFinished?(keymap)
         AppLog.log(.editor, "editor finished")
     }
 
     public func cancel() {
-        stopFollowing()
-        hideOverlay()
-        isActive = false
-        dragPreview = nil
+        endSession()
         onCancelled?()
         AppLog.log(.editor, "editor cancelled")
     }
 
     public func bindKey(keyCode: UInt16, name: String) {
         guard let selectedID, var button = button(id: selectedID) else {
-            statusText = "Select a button first, then press a key"
+            setStatus("Select a button first, then press a key")
             return
         }
         button.key = .virtual(keyCode, name: name)
         keymap.upsertButton(button)
-        statusText = "Bound \(name) — drag to move · drag the corner to resize · × to delete"
+        setStatus("Bound \(name) — press a key · drag · × to delete")
     }
 
     public func addButton(atNormalized point: CGPoint) {
@@ -87,12 +100,7 @@ public final class KeymapEditorController: ObservableObject {
         )
         keymap.elements.append(.button(button))
         selectedID = button.id
-        statusText = selectedStatus(for: button.key.name)
-    }
-
-    public func deleteSelected() {
-        guard let selectedID else { return }
-        deleteElement(id: selectedID)
+        setStatus(selectedStatus(for: button.key.name))
     }
 
     func deleteElement(id: UUID) {
@@ -103,12 +111,12 @@ public final class KeymapEditorController: ObservableObject {
         if dragPreview?.id == id {
             dragPreview = nil
         }
-        statusText = "Deleted"
+        setStatus("Deleted")
     }
 
     func select(_ button: ButtonElement) {
         selectedID = button.id
-        statusText = selectedStatus(for: button.key.name)
+        setStatus(selectedStatus(for: button.key.name))
     }
 
     func displayedTransform(for button: ButtonElement) -> NormalizedTransform {
@@ -131,6 +139,7 @@ public final class KeymapEditorController: ObservableObject {
         )
         if dragPreview != preview {
             dragPreview = preview
+            refreshChromeEdge()
         }
     }
 
@@ -153,6 +162,7 @@ public final class KeymapEditorController: ObservableObject {
         let preview = DragPreview(id: id, x: button.transform.x, y: button.transform.y, size: size)
         if dragPreview != preview {
             dragPreview = preview
+            refreshChromeEdge()
         }
     }
 
@@ -160,9 +170,34 @@ public final class KeymapEditorController: ObservableObject {
         guard let dragPreview else { return }
         applyTransform(id: dragPreview.id, x: dragPreview.x, y: dragPreview.y, size: dragPreview.size)
         if let name = button(id: dragPreview.id)?.key.name {
-            statusText = selectedStatus(for: name)
+            setStatus(selectedStatus(for: name))
         }
         self.dragPreview = nil
+        refreshChromeEdge()
+    }
+
+    func noteChromeMetrics(canvas: CGSize, barSize: CGSize) {
+        let canvasChanged = canvas != canvasSize
+        let barChanged = barSize != chromeBarSize && barSize.width > 0 && barSize.height > 0
+        if canvasChanged {
+            canvasSize = canvas
+        }
+        if barChanged {
+            chromeBarSize = barSize
+        }
+        if canvasChanged || barChanged {
+            refreshChromeEdge()
+        }
+    }
+
+    private func endSession() {
+        stopFollowing()
+        hideOverlay()
+        isActive = false
+        dragPreview = nil
+        chromeEdge = .bottom
+        canvasSize = .zero
+        isStatusMenuTracking = false
     }
 
     private func applyTransform(id: UUID, x: Double, y: Double, size: Double) {
@@ -182,7 +217,42 @@ public final class KeymapEditorController: ObservableObject {
     }
 
     private func selectedStatus(for name: String) -> String {
-        "Selected \(name) — press a key to bind · drag the corner to resize · × to delete"
+        "Selected \(name) — press a key · drag · × to delete"
+    }
+
+    private func setStatus(_ text: String) {
+        if statusText != text {
+            statusText = text
+        }
+        refreshChromeEdge()
+    }
+
+    private func refreshChromeEdge() {
+        let next = EditorChromeDodge.resolve(
+            current: chromeEdge,
+            canvas: canvasSize,
+            barSize: chromeBarSize,
+            obstacles: chromeObstacles(in: canvasSize)
+        )
+        if next != chromeEdge {
+            chromeEdge = next
+        }
+    }
+
+    func chromeObstacles(in canvas: CGSize) -> [CGRect] {
+        guard canvas.width > 0, canvas.height > 0 else { return [] }
+        let id = dragPreview?.id ?? selectedID
+        guard let id, let target = button(id: id) else { return [] }
+        let transform = displayedTransform(for: target)
+        return [
+            EditorChromeDodge.keycapFrame(
+                centerX: CGFloat(transform.x) * canvas.width,
+                centerY: CGFloat(transform.y) * canvas.height,
+                title: target.key.name,
+                shape: buttonShape,
+                scale: KeycapChrome.scale(for: transform.size)
+            )
+        ]
     }
 
     private func ensureOverlay() {
@@ -266,51 +336,52 @@ public final class KeymapEditorController: ObservableObject {
     /// Overlay presentation policy:
     /// - Never become key / never activate Arkeys. Target stays frontmost so
     ///   the game window does not hide, and keys arrive via the global monitor.
-    /// - Visible only while the target is the active app (above that window).
-    /// - Hidden when Settings or any other app is active, so the mask cannot
-    ///   cover those windows.
-    /// - If a click on the overlay still activates Arkeys, bounce focus back
-    ///   to the target. A click on Settings (or Cmd-Tab here) hides the mask.
+    /// - Visible while the target is frontmost, or while the status-item menu
+    ///   is open (hiding would bounce focus and dismiss the menu).
+    /// - Hidden when Settings is visible or another app is active. Hovering
+    ///   the target while Arkeys is frontmost must not raise the mask over
+    ///   host windows.
+    /// - A real overlay click (event window is the panel) bounces focus back.
     private func syncOverlayPresentation(fromActivation: Bool) {
         guard isActive else { return }
         guard let targetBundleID,
               let app = RunningAppCatalog.runningApplication(bundleID: targetBundleID),
               let frame = TargetResolver.primaryWindowFrame(for: app) else {
-            if statusText != "Waiting for target window…" {
-                statusText = "Waiting for target window…"
+            if statusText != Self.waitingStatus {
+                statusText = Self.waitingStatus
             }
             hideOverlay()
             return
         }
 
         let front = NSWorkspace.shared.frontmostApplication
-        if front?.processIdentifier == app.processIdentifier {
+        let decision = EditorOverlayPolicy.decide(
+            targetIsFrontmost: front?.processIdentifier == app.processIdentifier,
+            hostIsFrontmost: isSelf(front),
+            hideForHostUI: shouldHideForHostUI(),
+            statusMenuTracking: isStatusMenuTracking,
+            overlayInteraction: isOverlayInteraction()
+        )
+        switch decision {
+        case .hide:
+            hideOverlay()
+        case .show:
             revealOverlay(at: frame)
-            return
-        }
-
-        // Overlay click may activate Arkeys. Keep the mask up and bounce
-        // focus back to the target so the game window does not hide.
-        if isSelf(front), shouldReturnFocusToTarget() {
-            if overlayWindow?.isVisible == true {
-                moveOverlay(to: frame)
-            }
+        case .showAndReturnFocus:
+            revealOverlay(at: frame)
             if fromActivation {
                 activateTarget()
             }
-            return
         }
-
-        hideOverlay()
     }
 
     private func revealOverlay(at frame: NSRect) {
-        guard let overlayWindow else { return }
+        guard overlayWindow != nil else { return }
         moveOverlay(to: frame)
         // `setFrame(display: true)` can flip `isVisible` without bringing the
         // panel above the target — do not use it as the raise signal.
         if !isOverlayPresented {
-            overlayWindow.orderFrontRegardless()
+            overlayWindow?.orderFrontRegardless()
             isOverlayPresented = true
         }
     }
@@ -339,25 +410,17 @@ public final class KeymapEditorController: ObservableObject {
         return app.processIdentifier == ProcessInfo.processInfo.processIdentifier
     }
 
-    /// True when Arkeys was activated by interacting with the overlay, not Settings.
-    private func shouldReturnFocusToTarget() -> Bool {
+    /// True only for a click/drag that landed on the overlay panel.
+    /// Mouse location alone is not enough — hover must not raise the mask
+    /// over Settings while Arkeys is frontmost.
+    private func isOverlayInteraction() -> Bool {
         guard let overlayWindow else { return false }
-        if NSApp.currentEvent?.window === overlayWindow {
-            return true
-        }
-        if NSApp.currentEvent?.window != nil {
-            return false
-        }
-        let mouse = NSEvent.mouseLocation
-        guard overlayWindow.frame.contains(mouse) else { return false }
-        return !NSApp.windows.contains { window in
-            window !== overlayWindow && window.isVisible && window.frame.contains(mouse)
-        }
+        return NSApp.currentEvent?.window === overlayWindow
     }
 }
 
 /// Non-activating editor surface: never steals focus from the target.
-/// Esc is a bindable key — dismiss only via Cancel / Done.
+/// Esc is a bindable key — dismiss only via Cancel / Done / the menu bar.
 private final class EditorOverlayWindow: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
@@ -365,11 +428,182 @@ private final class EditorOverlayWindow: NSPanel {
     override func cancelOperation(_ sender: Any?) {}
 }
 
+private struct EditorChromeBarSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        let next = nextValue()
+        if next.width > 0, next.height > 0 {
+            value = next
+        }
+    }
+}
+
+private struct EditorChromeContentWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 {
+            value = next
+        }
+    }
+}
+
 struct KeymapEditorRootView: View {
     @ObservedObject var controller: KeymapEditorController
 
     var body: some View {
-        KeymapEditorCanvas(controller: controller)
+        GeometryReader { geo in
+            let canvas = geo.size
+            let barHeight = max(controller.chromeBarSize.height, EditorChromeDodge.islandHeight)
+            let barY = EditorChromeDodge.barCenterY(
+                edge: controller.chromeEdge,
+                canvas: canvas,
+                barHeight: barHeight
+            )
+            ZStack {
+                KeymapEditorCanvas(controller: controller)
+                KeymapEditorChromeBar(controller: controller, canvasWidth: canvas.width)
+                    .background {
+                        GeometryReader { bar in
+                            Color.clear.preference(key: EditorChromeBarSizeKey.self, value: bar.size)
+                        }
+                    }
+                    .position(x: canvas.width / 2, y: barY)
+            }
+            .onAppear {
+                controller.noteChromeMetrics(canvas: canvas, barSize: controller.chromeBarSize)
+            }
+            .onChange(of: canvas) { _, newSize in
+                controller.noteChromeMetrics(canvas: newSize, barSize: controller.chromeBarSize)
+            }
+            .onPreferenceChange(EditorChromeBarSizeKey.self) { size in
+                controller.noteChromeMetrics(canvas: canvas, barSize: size)
+            }
+            .animation(.easeOut(duration: 0.24), value: controller.chromeEdge)
+        }
+    }
+}
+
+/// Compact dark island — CleanShot / annotation-bar language, not a Tahoe search field.
+private struct KeymapEditorChromeBar: View {
+    @ObservedObject var controller: KeymapEditorController
+    var canvasWidth: CGFloat
+    @State private var contentWidth: CGFloat = 0
+
+    var body: some View {
+        let width = EditorChromeDodge.fittedBarWidth(
+            canvasWidth: canvasWidth,
+            contentWidth: contentWidth
+        )
+        EditorChromeBarContent(
+            statusText: controller.statusText,
+            copy: controller.chromeCopy,
+            expandStatus: true,
+            onCancel: { controller.cancel() },
+            onDone: { controller.finish() }
+        )
+        .frame(width: width)
+        .background {
+            EditorChromeBarContent(
+                statusText: controller.statusText,
+                copy: controller.chromeCopy,
+                expandStatus: false,
+                onCancel: {},
+                onDone: {}
+            )
+            .fixedSize(horizontal: true, vertical: false)
+            .hidden()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .overlay {
+                GeometryReader { geo in
+                    Color.clear.preference(key: EditorChromeContentWidthKey.self, value: geo.size.width)
+                }
+            }
+        }
+        .onPreferenceChange(EditorChromeContentWidthKey.self) { measured in
+            guard measured > 0, measured != contentWidth else { return }
+            contentWidth = measured
+        }
+    }
+}
+
+private struct EditorChromeBarContent: View {
+    var statusText: String
+    var copy: EditorChromeCopy
+    var expandStatus: Bool
+    var onCancel: () -> Void
+    var onDone: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(statusText)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: expandStatus ? .infinity : nil, alignment: .leading)
+                .padding(.leading, 12)
+                .padding(.trailing, 10)
+                .padding(.vertical, 8)
+
+            EditorChromeHairline()
+
+            HStack(spacing: 4) {
+                Button(action: onCancel) {
+                    Text(copy.cancel)
+                }
+                .buttonStyle(EditorChromeButtonStyle(prominent: false))
+
+                Button(action: onDone) {
+                    Text(copy.done)
+                }
+                .buttonStyle(EditorChromeButtonStyle(prominent: true))
+            }
+            .fixedSize()
+            .padding(.horizontal, 7)
+            .padding(.vertical, 6)
+        }
+        .background { EditorChromeMaterial(cornerRadius: 10) }
+        .environment(\.colorScheme, .dark)
+    }
+}
+
+private struct EditorChromeHairline: View {
+    var body: some View {
+        Rectangle()
+            .fill(.white.opacity(0.12))
+            .frame(width: 1, height: 14)
+    }
+}
+
+/// Dark HUD plate: material + scrim so light mode cannot bleach it into a search field.
+private struct EditorChromeMaterial: View {
+    var cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape
+            .fill(.ultraThinMaterial)
+            .overlay { shape.fill(Color.black.opacity(0.38)) }
+            .shadow(color: .black.opacity(0.32), radius: 12, y: 3)
+            .overlay { shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5) }
+    }
+}
+
+private struct EditorChromeButtonStyle: ButtonStyle {
+    var prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: prominent ? .semibold : .regular))
+            .foregroundStyle(prominent ? Color.white : Color.primary.opacity(0.88))
+            .padding(.horizontal, prominent ? 10 : 8)
+            .padding(.vertical, 4)
+            .background {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(prominent ? Color.accentColor : Color.white.opacity(configuration.isPressed ? 0.14 : 0.08))
+            }
+            .opacity(configuration.isPressed ? 0.86 : 1)
     }
 }
 
@@ -382,7 +616,7 @@ public struct KeymapEditorCanvas: View {
 
     public var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .top) {
+            ZStack {
                 Color.black.opacity(0.18)
                     .contentShape(Rectangle())
                     .gesture(
@@ -397,23 +631,6 @@ public struct KeymapEditorCanvas: View {
 
                 ForEach(controller.keymap.elements) { element in
                     elementView(element, in: geo.size)
-                }
-
-                VStack(spacing: 8) {
-                    HStack {
-                        Text(controller.statusText)
-                            .font(.caption)
-                            .foregroundStyle(.white)
-                            .padding(8)
-                            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 8))
-                        Spacer()
-                        Button("Delete") { controller.deleteSelected() }
-                        Button("Cancel") { controller.cancel() }
-                        Button("Done") { controller.finish() }
-                            .keyboardShortcut(.defaultAction)
-                    }
-                    .padding(10)
-                    Spacer()
                 }
             }
             .coordinateSpace(name: "keymapCanvas")

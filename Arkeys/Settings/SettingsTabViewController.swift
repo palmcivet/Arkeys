@@ -9,6 +9,7 @@ final class SettingsTabViewController: NSTabViewController {
     static let contentWidth: CGFloat = 460
 
     private let runtime: InputRuntime
+    private let editorSession: EditorSession
 
     enum Pane: Int, CaseIterable {
         case general
@@ -46,8 +47,9 @@ final class SettingsTabViewController: NSTabViewController {
         }
     }
 
-    init(runtime: InputRuntime) {
+    init(runtime: InputRuntime, editorSession: EditorSession) {
         self.runtime = runtime
+        self.editorSession = editorSession
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -97,7 +99,7 @@ final class SettingsTabViewController: NSTabViewController {
         case .general:
             root = AnyView(GeneralSettingsView().environmentObject(runtime))
         case .keymap:
-            root = AnyView(KeymapSettingsView().environmentObject(runtime))
+            root = AnyView(KeymapSettingsView(session: editorSession).environmentObject(runtime))
         case .compatibility:
             root = AnyView(CompatibilitySettingsView().environmentObject(runtime))
         case .about:

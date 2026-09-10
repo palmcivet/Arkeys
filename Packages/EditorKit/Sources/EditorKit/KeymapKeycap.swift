@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import KeymapCore
 
@@ -13,20 +14,15 @@ struct KeymapKeycap: View {
     let title: String
     let shape: KeymapButtonShape
     var style: Style = .normal
+    var scale: CGFloat = 1
 
     var body: some View {
+        let box = KeycapChrome.fittedSize(title: title, shape: shape, scale: scale)
         Text(title)
-            .font(.system(size: KeycapChrome.fontSize, weight: .regular))
+            .font(.system(size: KeycapChrome.fontSize * scale, weight: .regular))
             .foregroundStyle(.white)
-            .minimumScaleFactor(0.6)
             .lineLimit(1)
-            .padding(.horizontal, shape == .rectangle ? KeycapChrome.horizontalPadding : 0)
-            .padding(.vertical, shape == .rectangle ? KeycapChrome.verticalPadding : 0)
-            .frame(minWidth: KeycapChrome.minSide, minHeight: KeycapChrome.minSide)
-            .frame(
-                width: shape == .circle ? KeycapChrome.minSide : nil,
-                height: shape == .circle ? KeycapChrome.minSide : nil
-            )
+            .frame(width: box.width, height: box.height)
             .background(chrome)
             .shadow(color: .black.opacity(isOverlay ? 0.18 : 0.28), radius: 1.5, y: 1)
             .opacity(isOverlay ? 0.88 : 1)
@@ -57,23 +53,52 @@ struct KeymapKeycap: View {
                 .fill(fill)
                 .overlay(Circle().stroke(stroke, lineWidth: lineWidth))
         case .rectangle:
-            RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius * scale, style: .continuous)
                 .fill(fill)
                 .overlay(
-                    RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: KeycapChrome.cornerRadius * scale, style: .continuous)
                         .stroke(stroke, lineWidth: lineWidth)
                 )
         }
     }
 }
 
-private enum KeycapChrome {
+enum KeycapChrome {
     static let fontSize: CGFloat = 11
     static let minSide: CGFloat = 22
+    static let maxSide: CGFloat = 144
     static let horizontalPadding: CGFloat = 7
     static let verticalPadding: CGFloat = 3
     static let cornerRadius: CGFloat = 1
     static let fill = Color(white: 0.22)
     static let selectedFill = Color(white: 0.32)
     static let dimmedFill = Color(white: 0.22).opacity(0.45)
+    static let minScale: CGFloat = 1
+    static let maxScale: CGFloat = min(
+        maxSide / minSide,
+        CGFloat(NormalizedTransform.maxSize / NormalizedTransform.defaultSize)
+    )
+
+    static func scale(for normalizedSize: Double) -> CGFloat {
+        CGFloat(NormalizedTransform.visualScale(
+            size: normalizedSize,
+            minScale: Double(minScale),
+            maxScale: Double(maxScale)
+        ))
+    }
+
+    static func fittedSize(title: String, shape: KeymapButtonShape, scale: CGFloat) -> CGSize {
+        let font = NSFont.systemFont(ofSize: fontSize * scale)
+        let text = (title as NSString).size(withAttributes: [.font: font])
+        switch shape {
+        case .circle:
+            let side = max(minSide * scale, ceil(text.width + horizontalPadding * 2 * scale))
+            return CGSize(width: side, height: side)
+        case .rectangle:
+            return CGSize(
+                width: max(minSide * scale, ceil(text.width + horizontalPadding * 2 * scale)),
+                height: max(minSide * scale, ceil(text.height + verticalPadding * 2 * scale))
+            )
+        }
+    }
 }

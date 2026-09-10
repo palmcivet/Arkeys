@@ -32,13 +32,55 @@ public struct BoundKey: Codable, Hashable, Sendable {
 public struct NormalizedTransform: Codable, Hashable, Sendable {
     public var x: Double
     public var y: Double
-    /// Relative control size (PlayCover-style fraction / percent scale).
+    /// Relative control size in `0…1`. Values `> 1` are treated as percent on ingest.
     public var size: Double
 
     public init(x: Double, y: Double, size: Double) {
         self.x = x
         self.y = y
-        self.size = size
+        self.size = Self.clampSize(size)
+    }
+
+    public static let defaultSize: Double = 0.06
+    public static let minSize: Double = 0.015
+    public static let maxSize: Double = 0.40
+
+    /// PlayCover sometimes stores percent (`5` = 5%); Arkeys uses `0…1`.
+    public static func normalizedSize(_ raw: Double) -> Double {
+        raw > 1 ? raw / 100 : raw
+    }
+
+    public static func clampSize(_ raw: Double) -> Double {
+        min(max(normalizedSize(raw), minSize), maxSize)
+    }
+
+    /// Uniform scale from the default keycap. `1` matches the original chrome.
+    public static func visualScale(
+        size: Double,
+        minScale: Double,
+        maxScale: Double
+    ) -> Double {
+        let raw = clampSize(size) / defaultSize
+        return min(max(raw, minScale), maxScale)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case x, y, size
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let x = try c.decode(Double.self, forKey: .x)
+        let y = try c.decode(Double.self, forKey: .y)
+        let size = try c.decode(Double.self, forKey: .size)
+        self.init(x: x, y: y, size: size)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(x, forKey: .x)
+        try c.encode(y, forKey: .y)
+        try c.encode(size, forKey: .size)
     }
 }
 

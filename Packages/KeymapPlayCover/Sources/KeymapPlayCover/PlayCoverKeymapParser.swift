@@ -78,7 +78,7 @@ public struct PlayCoverKeymapParser: KeymapSchemeParser {
             case .mouseArea(let m):
                 mice.append(PlayCoverMouseAreaDTO(
                     keyName: m.keyName,
-                    transform: PlayCoverTransformDTO(size: m.transform.size, xCoord: m.transform.x, yCoord: m.transform.y)
+                    transform: dto(from: m.transform)
                 ))
             }
         }
@@ -103,7 +103,7 @@ public struct PlayCoverKeymapParser: KeymapSchemeParser {
     private static func button(from dto: PlayCoverButtonDTO) -> ButtonElement {
         ButtonElement(
             key: PlayCoverKeyCodeMap.boundKey(fromPlayCover: dto.keyCode, fallbackName: dto.keyName),
-            transform: NormalizedTransform(x: dto.transform.xCoord, y: dto.transform.yCoord, size: dto.transform.size)
+            transform: transform(from: dto.transform)
         )
     }
 
@@ -111,11 +111,7 @@ public struct PlayCoverKeymapParser: KeymapSchemeParser {
         PlayCoverButtonDTO(
             keyCode: PlayCoverKeyCodeMap.playCoverCode(from: button.key),
             keyName: button.key.name,
-            transform: PlayCoverTransformDTO(
-                size: button.transform.size,
-                xCoord: button.transform.x,
-                yCoord: button.transform.y
-            )
+            transform: dto(from: button.transform)
         )
     }
 
@@ -126,25 +122,19 @@ public struct PlayCoverKeymapParser: KeymapSchemeParser {
             down: PlayCoverKeyCodeMap.boundKey(fromPlayCover: dto.downKeyCode, fallbackName: "S"),
             left: PlayCoverKeyCodeMap.boundKey(fromPlayCover: dto.leftKeyCode, fallbackName: "A"),
             keyName: dto.keyName,
-            transform: NormalizedTransform(x: dto.transform.xCoord, y: dto.transform.yCoord, size: dto.transform.size),
+            transform: transform(from: dto.transform),
             floating: dto.mode == 1
         )
     }
 
     private static func dto(from joystick: JoystickElement) -> PlayCoverJoystickDTO {
-        // Encode via JSON round-trip helpers by constructing manually through Codable isn't needed —
-        // use a small internal builder.
         PlayCoverJoystickDTO(
             upKeyCode: PlayCoverKeyCodeMap.playCoverCode(from: joystick.up),
             rightKeyCode: PlayCoverKeyCodeMap.playCoverCode(from: joystick.right),
             downKeyCode: PlayCoverKeyCodeMap.playCoverCode(from: joystick.down),
             leftKeyCode: PlayCoverKeyCodeMap.playCoverCode(from: joystick.left),
             keyName: joystick.keyName,
-            transform: PlayCoverTransformDTO(
-                size: joystick.transform.size,
-                xCoord: joystick.transform.x,
-                yCoord: joystick.transform.y
-            ),
+            transform: dto(from: joystick.transform),
             mode: joystick.floating ? 1 : 0
         )
     }
@@ -152,7 +142,20 @@ public struct PlayCoverKeymapParser: KeymapSchemeParser {
     private static func mouseArea(from dto: PlayCoverMouseAreaDTO) -> MouseAreaElement {
         MouseAreaElement(
             keyName: dto.keyName,
-            transform: NormalizedTransform(x: dto.transform.xCoord, y: dto.transform.yCoord, size: dto.transform.size)
+            transform: transform(from: dto.transform)
+        )
+    }
+
+    /// PlayCover stores size as percent (`5` = 5%). Canonical size is `0…1`.
+    private static func transform(from dto: PlayCoverTransformDTO) -> NormalizedTransform {
+        NormalizedTransform(x: dto.xCoord, y: dto.yCoord, size: dto.size)
+    }
+
+    private static func dto(from transform: NormalizedTransform) -> PlayCoverTransformDTO {
+        PlayCoverTransformDTO(
+            size: NormalizedTransform.clampSize(transform.size) * 100,
+            xCoord: transform.x,
+            yCoord: transform.y
         )
     }
 }

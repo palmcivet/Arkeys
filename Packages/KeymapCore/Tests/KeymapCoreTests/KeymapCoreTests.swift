@@ -105,4 +105,24 @@ final class KeymapCoreTests: XCTestCase {
         XCTAssertEqual(loaded.keymapButtonShape, .circle)
         XCTAssertFalse(loaded.showKeymapOverlay)
     }
+
+    func testNormalizedSizeClampAndPlayCoverPercent() throws {
+        XCTAssertEqual(NormalizedTransform.clampSize(0.06), 0.06)
+        XCTAssertEqual(NormalizedTransform.clampSize(0.01), NormalizedTransform.minSize)
+        XCTAssertEqual(NormalizedTransform.clampSize(0.9), NormalizedTransform.maxSize)
+        XCTAssertEqual(NormalizedTransform.clampSize(5), 0.05)
+        XCTAssertEqual(NormalizedTransform.normalizedSize(8), 0.08)
+        XCTAssertEqual(NormalizedTransform(x: 0, y: 0, size: 5).size, 0.05)
+
+        let data = Data(#"{"x":0.1,"y":0.2,"size":5}"#.utf8)
+        let loaded = try JSONDecoder().decode(NormalizedTransform.self, from: data)
+        XCTAssertEqual(loaded.size, 0.05)
+    }
+
+    func testVisualScaleUsesDefaultAsIdentity() {
+        XCTAssertEqual(NormalizedTransform.visualScale(size: 0.06, minScale: 1, maxScale: 6), 1, accuracy: 0.0001)
+        XCTAssertEqual(NormalizedTransform.visualScale(size: 0.12, minScale: 1, maxScale: 6), 2, accuracy: 0.0001)
+        XCTAssertEqual(NormalizedTransform.visualScale(size: 0.01, minScale: 1, maxScale: 6), 1, accuracy: 0.0001)
+        XCTAssertEqual(NormalizedTransform.visualScale(size: 0.9, minScale: 1, maxScale: 6), 6, accuracy: 0.0001)
+    }
 }

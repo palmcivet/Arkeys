@@ -272,14 +272,26 @@ private struct KeymapHUDView: View {
     private func elementView(_ element: KeymapElement, in size: CGSize) -> some View {
         switch element {
         case .button(let button), .draggableButton(let button):
-            KeymapKeycap(title: button.key.name, shape: controller.buttonShape, style: .overlay)
-                .position(x: button.transform.x * size.width, y: button.transform.y * size.height)
+            hudKeycap(title: button.key.name, transform: button.transform, in: size, style: .overlay)
         case .joystick(let joy):
-            KeymapKeycap(title: "JS", shape: controller.buttonShape, style: .overlayDimmed)
-                .position(x: joy.transform.x * size.width, y: joy.transform.y * size.height)
+            hudKeycap(title: "JS", transform: joy.transform, in: size, style: .overlayDimmed)
         case .mouseArea(let area):
-            KeymapKeycap(title: "Mouse", shape: controller.buttonShape, style: .overlayDimmed)
-                .position(x: area.transform.x * size.width, y: area.transform.y * size.height)
+            hudKeycap(title: "Mouse", transform: area.transform, in: size, style: .overlayDimmed)
         }
+    }
+
+    private func hudKeycap(
+        title: String,
+        transform: NormalizedTransform,
+        in size: CGSize,
+        style: KeymapKeycap.Style
+    ) -> some View {
+        KeymapKeycap(
+            title: title,
+            shape: controller.buttonShape,
+            style: style,
+            scale: KeycapChrome.scale(for: transform.size)
+        )
+        .position(x: transform.x * size.width, y: transform.y * size.height)
     }
 }

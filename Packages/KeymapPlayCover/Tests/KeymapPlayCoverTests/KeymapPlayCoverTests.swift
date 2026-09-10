@@ -17,6 +17,13 @@ final class KeymapPlayCoverTests: XCTestCase {
         let k = try XCTUnwrap(map.button(matchingKeyCode: 40)) // K = NSEvent 40
         XCTAssertEqual(k.key.name, "K")
         XCTAssertEqual(k.transform.x, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(k.transform.size, 0.05, accuracy: 0.0001)
+
+        let joystick = map.elements.compactMap { element -> JoystickElement? in
+            if case .joystick(let joy) = element { return joy }
+            return nil
+        }.first
+        XCTAssertEqual(try XCTUnwrap(joystick).transform.size, 0.20, accuracy: 0.0001)
 
         if case .playCover(let version) = map.source {
             XCTAssertEqual(version, "2.0.0")
@@ -35,6 +42,11 @@ final class KeymapPlayCoverTests: XCTestCase {
         let again = try parser.decode(encoded)
         XCTAssertEqual(again.runnableButtons.count, map.runnableButtons.count)
         XCTAssertEqual(again.button(matchingKeyCode: 40)?.transform.x, 0.25)
+        XCTAssertEqual(again.button(matchingKeyCode: 40)?.transform.size, 0.05)
+
+        let dto = try PropertyListDecoder().decode(PlayCoverKeymapDTO.self, from: encoded)
+        XCTAssertEqual(dto.buttonModels[0].transform.size, 5, accuracy: 0.0001)
+        XCTAssertEqual(dto.joystickModel[0].transform.size, 20, accuracy: 0.0001)
     }
 
     func testRegistryDetect() throws {

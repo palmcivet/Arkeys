@@ -9,6 +9,7 @@ private struct DragPreview: Equatable {
     var id: UUID
     var x: Double
     var y: Double
+    var size: Double
 }
 
 @MainActor
@@ -17,7 +18,7 @@ public final class KeymapEditorController: ObservableObject {
     @Published public var selectedID: UUID?
     @Published public var isActive: Bool = false
     @Published public var buttonShape: KeymapButtonShape = .circle
-    @Published public var statusText: String = "Click empty area to add a button · drag to move · press a key to bind"
+    @Published public var statusText: String = KeymapEditorController.idleStatus
     @Published private var dragPreview: DragPreview?
 
     private var overlayWindow: NSWindow?
@@ -30,6 +31,8 @@ public final class KeymapEditorController: ObservableObject {
     public var onFinished: ((CanonicalKeymap) -> Void)?
     public var onCancelled: (() -> Void)?
 
+    static let idleStatus = "Click empty area to add · click a key to select · drag to move"
+
     public init(keymap: CanonicalKeymap = CanonicalKeymap()) {
         self.keymap = keymap
     }
@@ -39,6 +42,7 @@ public final class KeymapEditorController: ObservableObject {
         self.keymap = keymap
         self.selectedID = nil
         self.dragPreview = nil
+        self.statusText = Self.idleStatus
         self.lastOverlayFrame = nil
         self.isOverlayPresented = false
         self.isActive = true
@@ -67,51 +71,86 @@ public final class KeymapEditorController: ObservableObject {
     }
 
     public func bindKey(keyCode: UInt16, name: String) {
-        guard let selectedID,
-              let idx = keymap.elements.firstIndex(where: { $0.id == selectedID }),
-              var button = keymap.elements[idx].buttonElement else {
+        guard let selectedID, var button = button(id: selectedID) else {
             statusText = "Select a button first, then press a key"
             return
         }
         button.key = .virtual(keyCode, name: name)
-        if case .draggableButton = keymap.elements[idx] {
-            keymap.elements[idx] = .draggableButton(button)
-        } else {
-            keymap.elements[idx] = .button(button)
-        }
-        statusText = "Bound \(name)"
+        keymap.upsertButton(button)
+        statusText = "Bound \(name) — drag to move · drag the corner to resize · × to delete"
     }
 
     public func addButton(atNormalized point: CGPoint) {
         let button = ButtonElement(
             key: BoundKey(code: .unknown(-1), name: "?"),
-            transform: NormalizedTransform(x: point.x, y: point.y, size: 0.06)
+            transform: NormalizedTransform(x: point.x, y: point.y, size: NormalizedTransform.defaultSize)
         )
         keymap.elements.append(.button(button))
         selectedID = button.id
-        statusText = "Added button — press a key to bind"
+        statusText = selectedStatus(for: button.key.name)
     }
 
     public func deleteSelected() {
         guard let selectedID else { return }
-        keymap.removeElement(id: selectedID)
-        self.selectedID = nil
-        dragPreview = nil
+        deleteElement(id: selectedID)
+    }
+
+    func deleteElement(id: UUID) {
+        keymap.removeElement(id: id)
+        if selectedID == id {
+            selectedID = nil
+        }
+        if dragPreview?.id == id {
+            dragPreview = nil
+        }
         statusText = "Deleted"
+    }
+
+    func select(_ button: ButtonElement) {
+        selectedID = button.id
+        statusText = selectedStatus(for: button.key.name)
     }
 
     func displayedTransform(for button: ButtonElement) -> NormalizedTransform {
         if let dragPreview, dragPreview.id == button.id {
-            return NormalizedTransform(x: dragPreview.x, y: dragPreview.y, size: button.transform.size)
+            return NormalizedTransform(x: dragPreview.x, y: dragPreview.y, size: dragPreview.size)
         }
         return button.transform
     }
 
     func previewDrag(id: UUID, x: Double, y: Double) {
+        guard let button = button(id: id) else { return }
         if selectedID != id {
-            selectedID = id
+            select(button)
         }
-        let preview = DragPreview(id: id, x: min(max(x, 0), 1), y: min(max(y, 0), 1))
+        let preview = DragPreview(
+            id: id,
+            x: min(max(x, 0), 1),
+            y: min(max(y, 0), 1),
+            size: button.transform.size
+        )
+        if dragPreview != preview {
+            dragPreview = preview
+        }
+    }
+
+    func previewResize(id: UUID, canvasLocation: CGPoint, canvas: CGSize) {
+        guard let button = button(id: id) else { return }
+        if selectedID != id {
+            select(button)
+        }
+        let reference = EditorHandleLayout.resizeReference(title: button.key.name, shape: buttonShape)
+        let size = EditorHandleLayout.sizeAfterCornerResize(
+            cursorX: Double(canvasLocation.x),
+            cursorY: Double(canvasLocation.y),
+            centerX: button.transform.x * Double(canvas.width),
+            centerY: button.transform.y * Double(canvas.height),
+            unscaledWidth: reference.width,
+            unscaledHeight: reference.height,
+            minScale: Double(KeycapChrome.minScale),
+            maxScale: Double(KeycapChrome.maxScale)
+        )
+        let preview = DragPreview(id: id, x: button.transform.x, y: button.transform.y, size: size)
         if dragPreview != preview {
             dragPreview = preview
         }
@@ -119,20 +158,31 @@ public final class KeymapEditorController: ObservableObject {
 
     func endDrag() {
         guard let dragPreview else { return }
-        applyTransform(id: dragPreview.id, x: dragPreview.x, y: dragPreview.y)
+        applyTransform(id: dragPreview.id, x: dragPreview.x, y: dragPreview.y, size: dragPreview.size)
+        if let name = button(id: dragPreview.id)?.key.name {
+            statusText = selectedStatus(for: name)
+        }
         self.dragPreview = nil
     }
 
-    private func applyTransform(id: UUID, x: Double, y: Double) {
-        guard let idx = keymap.elements.firstIndex(where: { $0.id == id }),
-              var button = keymap.elements[idx].buttonElement else { return }
-        button.transform.x = x
-        button.transform.y = y
-        if case .draggableButton = keymap.elements[idx] {
-            keymap.elements[idx] = .draggableButton(button)
-        } else {
-            keymap.elements[idx] = .button(button)
+    private func applyTransform(id: UUID, x: Double, y: Double, size: Double) {
+        updateButton(id: id) { button in
+            button.transform = NormalizedTransform(x: x, y: y, size: size)
         }
+    }
+
+    private func button(id: UUID) -> ButtonElement? {
+        keymap.elements.first { $0.id == id }?.buttonElement
+    }
+
+    private func updateButton(id: UUID, mutate: (inout ButtonElement) -> Void) {
+        guard var button = button(id: id) else { return }
+        mutate(&button)
+        keymap.upsertButton(button)
+    }
+
+    private func selectedStatus(for name: String) -> String {
+        "Selected \(name) — press a key to bind · drag the corner to resize · × to delete"
     }
 
     private func ensureOverlay() {
@@ -374,7 +424,7 @@ public struct KeymapEditorCanvas: View {
     private func elementView(_ element: KeymapElement, in size: CGSize) -> some View {
         switch element {
         case .button(let button), .draggableButton(let button):
-            buttonNode(button, in: size, dimmed: false)
+            buttonNode(button, in: size)
         case .joystick(let joy):
             unsupportedNode(
                 id: joy.id,
@@ -392,39 +442,45 @@ public struct KeymapEditorCanvas: View {
         }
     }
 
-    private func buttonNode(_ button: ButtonElement, in size: CGSize, dimmed: Bool) -> some View {
+    private func buttonNode(_ button: ButtonElement, in size: CGSize) -> some View {
         let transform = controller.displayedTransform(for: button)
         let selected = controller.selectedID == button.id
-        return KeymapKeycap(
+        return KeymapEditorNode(
             title: button.key.name,
             shape: controller.buttonShape,
-            style: dimmed ? .dimmed : (selected ? .selected : .normal)
+            style: selected ? .selected : .normal,
+            scale: KeycapChrome.scale(for: transform.size),
+            onDelete: { controller.deleteElement(id: button.id) },
+            onSelect: { controller.select(button) },
+            onMove: { location in
+                controller.previewDrag(
+                    id: button.id,
+                    x: location.x / size.width,
+                    y: location.y / size.height
+                )
+            },
+            onResize: { location in
+                controller.previewResize(
+                    id: button.id,
+                    canvasLocation: location,
+                    canvas: size
+                )
+            },
+            onGestureEnd: { controller.endDrag() }
         )
-            .position(
-                x: transform.x * size.width,
-                y: transform.y * size.height
-            )
-            .gesture(
-                DragGesture(minimumDistance: 2, coordinateSpace: .named("keymapCanvas"))
-                    .onChanged { value in
-                        controller.previewDrag(
-                            id: button.id,
-                            x: value.location.x / size.width,
-                            y: value.location.y / size.height
-                        )
-                    }
-                    .onEnded { _ in
-                        controller.endDrag()
-                    }
-            )
-            .onTapGesture {
-                controller.selectedID = button.id
-                controller.statusText = "Selected \(button.key.name) — press a key to rebind"
-            }
+        .position(
+            x: transform.x * size.width,
+            y: transform.y * size.height
+        )
     }
 
     private func unsupportedNode(id: UUID, label: String, transform: NormalizedTransform, in size: CGSize) -> some View {
-        KeymapKeycap(title: label, shape: controller.buttonShape, style: .dimmed)
+        KeymapKeycap(
+            title: label,
+            shape: controller.buttonShape,
+            style: .dimmed,
+            scale: KeycapChrome.scale(for: transform.size)
+        )
             .position(x: transform.x * size.width, y: transform.y * size.height)
             .allowsHitTesting(false)
     }

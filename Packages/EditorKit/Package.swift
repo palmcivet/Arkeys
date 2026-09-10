@@ -13,5 +13,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "EditorKit", dependencies: ["KeymapCore", "Targeting"]),
+        .testTarget(name: "EditorKitTests", dependencies: ["EditorKit"]),
     ]
 )

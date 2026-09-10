@@ -1,6 +1,5 @@
 import Foundation
 import AppKit
-import ApplicationServices
 import Combine
 import KeymapCore
 import Injection
@@ -52,6 +51,12 @@ public final class InputRuntime: ObservableObject {
     /// Last non-Arkeys app that was frontmost — used by Compatibility Test Click.
     private var previousFrontmostApp: NSRunningApplication?
     private var frontmostObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
+    private var accessibilityAPIObserver: NSObjectProtocol?
+    /// Global monitors installed while untrusted stay silent after the user
+    /// enables Accessibility. True only if the current global monitor was
+    /// created under a trusted process.
+    private var globalMonitorBoundWhileTrusted = false
 
     public init() {
         DispatchQueue.main.async { [weak self] in
@@ -62,6 +67,12 @@ public final class InputRuntime: ObservableObject {
     deinit {
         if let frontmostObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(frontmostObserver)
+        }
+        if let activationObserver {
+            NotificationCenter.default.removeObserver(activationObserver)
+        }
+        if let accessibilityAPIObserver {
+            DistributedNotificationCenter.default().removeObserver(accessibilityAPIObserver)
         }
         // Monitors removed best-effort; NSEvent APIs are main-thread.
     }
@@ -74,45 +85,22 @@ public final class InputRuntime: ObservableObject {
         applyCapability(CapabilityProbe.run(promptAccessibility: true))
         startMonitoring()
         startTrackingFrontmost()
+        startPermissionObservers()
         AppLog.log(.capability, "ready: mode=\(injectMode.rawValue) target=\(targetBundleID ?? "nil") "
-            + "bindings=\(keymap.runnableButtons.count) globalMonitor=\(globalKeyMonitor != nil)")
+            + "bindings=\(keymap.runnableButtons.count) globalMonitor=\(globalKeyMonitor != nil) "
+            + "ax=\(globalMonitorBoundWhileTrusted)")
     }
 
     public func startMonitoring() {
-        stopMonitoring()
-
-        let axTrusted = AXIsProcessTrusted()
-        AppLog.log(.capability, "startMonitoring: AXIsProcessTrusted=\(axTrusted)")
-
-        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            Task { @MainActor in
-                self?.handleKeyEvent(event, source: "global")
-            }
-        }
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            Task { @MainActor in
-                self?.handleKeyEvent(event, source: "local")
-            }
-            // Swallow Escape while editing so AppKit does not treat it as cancel.
-            // Esc is a bindable key (e.g. game "back"), not an editor dismiss shortcut.
-            if event.keyCode == CarbonKeyNames.escapeKeyCode, self?.isEditing == true {
-                return nil
-            }
-            return event
-        }
-
-        if globalKeyMonitor == nil {
-            AppLog.log(.capability, "global key monitor FAILED — grant Accessibility access")
-        } else {
-            AppLog.log(.capability, "global+local key monitors started")
-        }
+        installLocalKeyMonitorIfNeeded()
+        // Reuse the startup probe — do not ask tccd a second time.
+        let trusted = capability?.accessibilityTrusted ?? CapabilityProbe.isAccessibilityTrusted()
+        AppLog.log(.capability, "startMonitoring: AXIsProcessTrusted=\(trusted)")
+        syncGlobalKeyMonitor(trusted: trusted, forceRebind: false)
     }
 
     public func stopMonitoring() {
-        if let globalKeyMonitor {
-            NSEvent.removeMonitor(globalKeyMonitor)
-            self.globalKeyMonitor = nil
-        }
+        removeGlobalKeyMonitor()
         if let localKeyMonitor {
             NSEvent.removeMonitor(localKeyMonitor)
             self.localKeyMonitor = nil
@@ -251,9 +239,7 @@ public final class InputRuntime: ObservableObject {
 
     public func refreshCapability() {
         applyCapability(CapabilityProbe.run(promptAccessibility: false))
-        if globalKeyMonitor == nil {
-            startMonitoring()
-        }
+        syncGlobalKeyMonitor(trusted: capability?.accessibilityTrusted == true, forceRebind: true)
     }
 
     public func fireClick(relativeX: Double, relativeY: Double) {
@@ -284,14 +270,10 @@ public final class InputRuntime: ObservableObject {
         performClick(on: target)
     }
 
-    /// Prompt TCC (system Accessibility Access dialog when eligible), then open the
-    /// Accessibility privacy pane so the user can toggle Arkeys if they already denied.
+    /// Jump to System Settings → Accessibility. The grant dialog is first-launch
+    /// only (`startIfNeeded`); observers rebind when the user toggles the row.
     public func openAccessibilitySettings() {
-        applyCapability(CapabilityProbe.run(promptAccessibility: true))
         openAccessibilityPrivacyPane()
-        if globalKeyMonitor == nil {
-            startMonitoring()
-        }
     }
 
     private func openAccessibilityPrivacyPane() {
@@ -314,6 +296,130 @@ public final class InputRuntime: ObservableObject {
         lastInjectPosted = result.posted
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             NotificationCenter.default.post(name: .hideClickOverlay, object: nil)
+        }
+    }
+
+    /// tccd lags `com.apple.accessibility.api`; retry instead of one sleep.
+    /// The notification name is undocumented — activation is the fallback.
+    private enum AccessibilityTCC {
+        static let settle = Duration.milliseconds(150)
+        static let attempts = 3
+        static let apiDidChange = Notification.Name("com.apple.accessibility.api")
+    }
+
+    /// Local monitors work without Accessibility and should not be torn down
+    /// just to rebind the global one.
+    private func installLocalKeyMonitorIfNeeded() {
+        guard localKeyMonitor == nil else { return }
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in
+                self?.handleKeyEvent(event, source: "local")
+            }
+            // Swallow Escape while editing so AppKit does not treat it as cancel.
+            // Esc is a bindable key (e.g. game "back"), not an editor dismiss shortcut.
+            if event.keyCode == CarbonKeyNames.escapeKeyCode, self?.isEditing == true {
+                return nil
+            }
+            return event
+        }
+    }
+
+    /// Bind or drop the global monitor so it matches TCC trust. Creating one
+    /// while untrusted is worse than having none — it stays silent after grant.
+    private func syncGlobalKeyMonitor(trusted: Bool, forceRebind: Bool) {
+        if trusted && globalMonitorBoundWhileTrusted && !forceRebind { return }
+
+        let hadGlobal = globalKeyMonitor != nil
+        removeGlobalKeyMonitor()
+
+        if trusted {
+            installGlobalKeyMonitor()
+        } else if hadGlobal {
+            AppLog.log(.capability, "global key monitor removed — Accessibility not trusted")
+        } else {
+            AppLog.log(.capability, "skip global key monitor — Accessibility not trusted")
+        }
+    }
+
+    private func installGlobalKeyMonitor() {
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in
+                self?.handleKeyEvent(event, source: "global")
+            }
+        }
+        if globalKeyMonitor == nil {
+            AppLog.log(.capability, "global key monitor FAILED — grant Accessibility access")
+            globalMonitorBoundWhileTrusted = false
+        } else {
+            AppLog.log(.capability, "global key monitor started")
+            globalMonitorBoundWhileTrusted = true
+        }
+    }
+
+    private func removeGlobalKeyMonitor() {
+        if let globalKeyMonitor {
+            NSEvent.removeMonitor(globalKeyMonitor)
+            self.globalKeyMonitor = nil
+        }
+        globalMonitorBoundWhileTrusted = false
+    }
+
+    /// Cheap AX read. Full `CapabilityProbe.run` (event tap + SkyLight) only
+    /// when trust no longer matches the current global-monitor binding — grant
+    /// and revoke both count.
+    private func syncAccessibilityTrustIfChanged(settle: Bool) async {
+        let trusted = await resolvedAccessibilityTrust(settle: settle)
+        guard trusted != globalMonitorBoundWhileTrusted else { return }
+
+        AppLog.log(.capability, "accessibility trust \(trusted ? "granted" : "revoked")")
+        applyCapability(CapabilityProbe.run(promptAccessibility: false))
+        syncGlobalKeyMonitor(
+            trusted: capability?.accessibilityTrusted ?? trusted,
+            forceRebind: false
+        )
+    }
+
+    /// tccd's answer lags `com.apple.accessibility.api`. Retry only while we
+    /// are still waiting to become trusted; revocation is typically immediate.
+    private func resolvedAccessibilityTrust(settle: Bool) async -> Bool {
+        var trusted = CapabilityProbe.isAccessibilityTrusted()
+        guard settle, !trusted, !globalMonitorBoundWhileTrusted else {
+            return trusted
+        }
+        for _ in 1..<AccessibilityTCC.attempts {
+            try? await Task.sleep(for: AccessibilityTCC.settle)
+            trusted = CapabilityProbe.isAccessibilityTrusted()
+            if trusted { break }
+        }
+        return trusted
+    }
+
+    private func startPermissionObservers() {
+        // Supported signal: user returns from System Settings.
+        if activationObserver == nil {
+            activationObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.syncAccessibilityTrustIfChanged(settle: false)
+                }
+            }
+        }
+
+        // Undocumented, but the usual signal when any Accessibility row changes.
+        // Activation above is the fallback if this name goes away.
+        if accessibilityAPIObserver == nil {
+            accessibilityAPIObserver = DistributedNotificationCenter.default().addObserver(
+                forName: AccessibilityTCC.apiDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.syncAccessibilityTrustIfChanged(settle: true)
+                }
+            }
         }
     }
 
@@ -365,7 +471,9 @@ public final class InputRuntime: ObservableObject {
     }
 
     private func applyCapability(_ report: CapabilityReport) {
-        capability = report
+        if capability != report {
+            capability = report
+        }
         let raw = pendingInjectModeRaw ?? injectMode.rawValue
         let resolved = InjectMode.resolvedProductMode(raw: raw, report: report)
         pendingInjectModeRaw = nil

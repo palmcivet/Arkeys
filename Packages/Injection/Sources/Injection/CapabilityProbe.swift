@@ -3,7 +3,7 @@ import ApplicationServices
 import AppKit
 import Targeting
 
-public struct CapabilityReport: Sendable {
+public struct CapabilityReport: Sendable, Equatable {
     public let osVersion: String
     public let accessibilityTrusted: Bool
     public let eventTapCreatable: Bool
@@ -18,18 +18,12 @@ public struct CapabilityReport: Sendable {
 }
 
 public enum CapabilityProbe {
+    /// Full probe: Accessibility, a throwaway session event tap, and SkyLight
+    /// symbols. Use `isAccessibilityTrusted` when only TCC trust is needed.
     public static func run(promptAccessibility: Bool = true) -> CapabilityReport {
         let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
 
-        let axTrusted: Bool
-        if promptAccessibility {
-            // Registers this process with TCC and may present the system
-            // "Accessibility Access" dialog. Opening System Settings alone does not.
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            axTrusted = AXIsProcessTrustedWithOptions(options)
-        } else {
-            axTrusted = AXIsProcessTrusted()
-        }
+        let axTrusted = isAccessibilityTrusted(prompt: promptAccessibility)
 
         let tapOK = canCreateKeyDownTap()
         let sky = SkyLightBridge.shared
@@ -44,6 +38,16 @@ public enum CapabilityProbe {
         )
         AppLog.log(.capability, report.summaryLine)
         return report
+    }
+
+    /// `AXIsProcessTrusted()` can stay false for the life of a process that
+    /// launched untrusted. `WithOptions(nil)` asks tccd again without prompting.
+    public static func isAccessibilityTrusted(prompt: Bool = false) -> Bool {
+        if prompt {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            return AXIsProcessTrustedWithOptions(options)
+        }
+        return AXIsProcessTrustedWithOptions(nil)
     }
 
     private static func canCreateKeyDownTap() -> Bool {

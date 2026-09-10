@@ -20,7 +20,7 @@ final class SettingsTabViewController: NSTabViewController {
         /// Sized so each pane fits without scrolling — Apple preference-window guidance.
         var contentHeight: CGFloat {
             switch self {
-            case .general: return 380
+            case .general: return 420
             case .keymap: return 360
             case .compatibility: return 620
             case .about: return 140

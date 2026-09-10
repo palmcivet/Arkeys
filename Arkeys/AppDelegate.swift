@@ -48,6 +48,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(handleHideClickOverlay), name: .hideClickOverlay, object: nil)
     }
 
+    /// Dock click / Finder reopen. Overlay and HUD windows can make
+    /// `hasVisibleWindows` true even when Settings is closed, so always
+    /// bring Settings forward — this is the recovery path when the menu-bar
+    /// icon is hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettings()
+        return false
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     @objc func openSettings() {
         guard let runtime else { return }
 
@@ -112,7 +125,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         guard notification.object as? NSWindow === settingsWindow else { return }
         isSettingsVisible = false
-        refreshActivationPolicy()
+        // Re-assert Dock after AppKit finishes closing the last window.
+        // LSUIElement apps can otherwise drop the Dock icon and leave no UI.
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshActivationPolicy()
+        }
     }
 
     // MARK: - Click overlay

@@ -120,6 +120,13 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示菜单栏图标" } }
       }
     },
+    "general.menuBarIcon.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "When hidden, Arkeys stays in the Dock. Click the Dock icon to reopen Settings." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐藏后会出现在程序坞中，点击程序坞图标即可重新打开设置。" } }
+      }
+    },
     "general.language" : {
       "extractionState" : "manual",
       "localizations" : {

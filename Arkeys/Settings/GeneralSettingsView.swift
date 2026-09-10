@@ -13,6 +13,8 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle("general.enabled", isOn: $runtime.isEnabled)
                 Toggle("general.menuBarIcon", isOn: $runtime.showMenuBarIcon)
+            } footer: {
+                SettingsFooter("general.menuBarIcon.footer")
             }
 
             Section {

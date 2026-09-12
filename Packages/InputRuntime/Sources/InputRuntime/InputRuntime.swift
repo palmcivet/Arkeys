@@ -361,20 +361,12 @@ public final class InputRuntime: ObservableObject {
 
     /// Jump to System Settings → Accessibility. The grant dialog is first-launch
     /// only (`startIfNeeded`); observers rebind when the user toggles the row.
-    public func openAccessibilitySettings() {
-        openAccessibilityPrivacyPane()
-    }
-
-    private func openAccessibilityPrivacyPane() {
-        let candidates = [
+    @discardableResult
+    public func openAccessibilitySettings() -> Bool {
+        SystemSettingsOpener.open([
             "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
-        ]
-        for candidate in candidates {
-            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
-                return
-            }
-        }
+        ])
     }
 
     private func performClick(on target: InjectionTarget) {
@@ -789,6 +781,18 @@ public final class InputRuntime: ObservableObject {
 private extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
+    }
+}
+
+public enum SystemSettingsOpener {
+    @discardableResult
+    public static func open(_ candidates: [String]) -> Bool {
+        for candidate in candidates {
+            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+                return true
+            }
+        }
+        return false
     }
 }
 

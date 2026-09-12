@@ -16,7 +16,24 @@ final class EditorSession {
         cancellables.removeAll()
         controller.chromeCopy = EditorChromeCopy(
             cancel: String(localized: "common.cancel"),
-            done: String(localized: "editor.done")
+            done: String(localized: "editor.done"),
+            idleStatus: String(localized: "editor.status.idle"),
+            waitingStatus: String(localized: "editor.status.waiting"),
+            selectButtonFirst: String(localized: "editor.status.selectFirst"),
+            boundFormat: String(localized: "editor.status.bound"),
+            deleted: String(localized: "editor.status.deleted"),
+            selectedFormat: String(localized: "editor.status.selected"),
+            deleteKey: String(localized: "editor.delete"),
+            resizeKey: String(localized: "editor.resize"),
+            deleteHelp: String(localized: "common.delete"),
+            resizeHelp: String(localized: "editor.resize.help"),
+            resizeHint: String(localized: "editor.resize.hint"),
+            keyHint: String(localized: "editor.key.hint"),
+            addKey: String(localized: "editor.addKey"),
+            moveLeft: String(localized: "editor.move.left"),
+            moveRight: String(localized: "editor.move.right"),
+            moveUp: String(localized: "editor.move.up"),
+            moveDown: String(localized: "editor.move.down")
         )
         runtime.$keymapButtonShape
             .sink { [weak self] shape in

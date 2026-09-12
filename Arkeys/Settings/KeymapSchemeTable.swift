@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 import KeymapCore
 
@@ -16,7 +17,11 @@ struct KeymapSchemeTable: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let tableView = KeymapTableChrome.makeTableView()
+        let tableView = KeymapSchemeTableView()
+        KeymapTableChrome.configure(tableView)
+        tableView.onRenameSelection = { [weak coordinator = context.coordinator] in
+            coordinator?.beginRenameOfSelection()
+        }
         tableView.addTableColumn(KeymapTableChrome.makeFixedColumn(
             id: KeymapSchemeTableCoordinator.checkColumnID,
             width: KeymapTableMetrics.checkColumnWidth
@@ -26,6 +31,7 @@ struct KeymapSchemeTable: NSViewRepresentable {
         tableView.dataSource = context.coordinator
         tableView.target = context.coordinator
         tableView.doubleAction = #selector(KeymapSchemeTableCoordinator.doubleClicked(_:))
+        tableView.setAccessibilityLabel(String(localized: "keymap.schemes.header"))
 
         context.coordinator.attach(tableView)
         return KeymapTableChrome.makeScrollView(tableView: tableView)
@@ -116,6 +122,7 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
             let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
                 ?? KeymapTableChrome.makeImageCell(identifier: identifier, size: 12)
             cell.imageView?.image = checkImage(for: row)
+            cell.setAccessibilityElement(false)
             return cell
         }
 
@@ -124,6 +131,10 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
         let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
             ?? makeNameCell(identifier: identifier)
         cell.textField?.stringValue = schemes[row].name
+        let isEditing = editingSchemeID == schemes[row].id
+        cell.textField?.setAccessibilityElement(isEditing)
+        cell.setAccessibilityElement(!isEditing)
+        cell.setAccessibilityLabel(schemes[row].name)
         return cell
     }
 
@@ -174,6 +185,14 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
             tableView?.window?.makeFirstResponder(tableView)
             return true
         }
+        // Return commits and restores table focus. `finishEditing` is idempotent
+        // if resigning first responder also posts `controlTextDidEndEditing`.
+        if commandSelector == #selector(NSResponder.insertNewline(_:)),
+           let textField = control as? NSTextField {
+            finishEditing(textField, commit: true)
+            tableView?.window?.makeFirstResponder(tableView)
+            return true
+        }
         return false
     }
 
@@ -189,6 +208,8 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
         nameBeforeEdit = schemes[row].name
         textField.isEditable = true
         textField.isSelectable = true
+        textField.setAccessibilityElement(true)
+        cell.setAccessibilityElement(false)
         tableView.window?.makeFirstResponder(textField)
         textField.currentEditor()?.selectAll(nil)
     }
@@ -198,6 +219,8 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
         editingSchemeID = nil
         textField.isEditable = false
         textField.isSelectable = false
+        textField.setAccessibilityElement(false)
+        textField.superview?.setAccessibilityElement(true)
 
         let name = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if commit, !name.isEmpty, name != nameBeforeEdit {
@@ -253,5 +276,22 @@ final class KeymapSchemeTableCoordinator: NSObject, NSTableViewDataSource, NSTab
     private static func sameRows(_ lhs: [KeymapSchemeMeta], _ rhs: [KeymapSchemeMeta]) -> Bool {
         guard lhs.count == rhs.count else { return false }
         return zip(lhs, rhs).allSatisfy { $0.id == $1.id && $0.name == $1.name }
+    }
+}
+
+private final class KeymapSchemeTableView: NSTableView {
+    var onRenameSelection: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        // Return/Enter and F2 match Finder: rename the selected scheme.
+        let isRenameKey =
+            event.keyCode == UInt16(kVK_Return)
+            || event.keyCode == UInt16(kVK_ANSI_KeypadEnter)
+            || event.keyCode == UInt16(kVK_F2)
+        if isRenameKey, isEnabled, selectedRow >= 0, onRenameSelection != nil {
+            onRenameSelection?()
+            return
+        }
+        super.keyDown(with: event)
     }
 }

@@ -8,7 +8,7 @@ import Targeting
 struct KeymapSettingsView: View {
     @EnvironmentObject private var runtime: InputRuntime
     var session: EditorSession
-    @StateObject private var highlight = TargetHighlightController()
+    @StateObject private var highlight = TargetHighlightController(copy: .app)
     @State private var isImporting = false
     @State private var isExporting = false
     @State private var exportDocument: KeymapExportDocument?
@@ -216,8 +216,13 @@ struct KeymapSettingsView: View {
                 .settingsMultilineLeading()
         } else {
             HStack(spacing: 8) {
+                if runtime.keymap.unresolvedButtonCount > 0 {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .accessibilityHidden(true)
+                }
                 Text(schemeSummaryText)
-                    .foregroundStyle(runtime.keymap.unresolvedButtonCount > 0 ? Color.orange : .secondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 Button("keymap.schemes.edit") {

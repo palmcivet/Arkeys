@@ -2,17 +2,36 @@ import Foundation
 import AppKit
 import SwiftUI
 
+/// Host-supplied overlay copy. Targeting does not read the app catalog.
+public struct TargetHighlightCopy: Equatable, Sendable {
+    public var waitingStatus: String
+    public var targetPreview: String
+
+    public init(waitingStatus: String, targetPreview: String) {
+        self.waitingStatus = waitingStatus
+        self.targetPreview = targetPreview
+    }
+
+    public static let english = TargetHighlightCopy(
+        waitingStatus: "Waiting for window…",
+        targetPreview: "Target Preview"
+    )
+}
+
 /// Semi-transparent floating layer that follows a candidate target window while picking an app.
 @MainActor
 public final class TargetHighlightController: ObservableObject {
     @Published public private(set) var isVisible: Bool = false
     @Published public private(set) var previewBundleID: String?
     @Published public private(set) var statusText: String = ""
+    public var copy: TargetHighlightCopy
 
     private var overlayWindow: NSWindow?
     private var followTimer: Timer?
 
-    public init() {}
+    public init(copy: TargetHighlightCopy = .english) {
+        self.copy = copy
+    }
 
     public func show(bundleID: String) {
         previewBundleID = bundleID
@@ -44,8 +63,9 @@ public final class TargetHighlightController: ObservableObject {
             window.level = .floating
             window.ignoresMouseEvents = true
             window.hasShadow = false
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            window.contentView = NSHostingView(rootView: TargetHighlightOverlayView())
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+            window.contentView = NSHostingView(rootView: TargetHighlightOverlayView(copy: copy))
+            window.hideFromAccessibility()
             overlayWindow = window
         }
     }
@@ -70,7 +90,7 @@ public final class TargetHighlightController: ObservableObject {
         guard let previewBundleID,
               let app = RunningAppCatalog.runningApplication(bundleID: previewBundleID),
               let frame = TargetResolver.primaryWindowFrame(for: app) else {
-            statusText = "Waiting for window…"
+            statusText = copy.waitingStatus
             return
         }
         statusText = app.localizedName ?? previewBundleID
@@ -79,25 +99,33 @@ public final class TargetHighlightController: ObservableObject {
 }
 
 private struct TargetHighlightOverlayView: View {
+    var copy: TargetHighlightCopy
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+
     var body: some View {
+        let fillOpacity = reduceTransparency ? 0.42 : 0.22
+        let badgeOpacity = reduceTransparency ? 0.88 : 0.55
+        let strokeWidth: CGFloat = contrast == .increased ? 4 : 3
         ZStack {
             RoundedRectangle(cornerRadius: 0)
-                .fill(Color.cyan.opacity(0.22))
+                .fill(Color.cyan.opacity(fillOpacity))
             RoundedRectangle(cornerRadius: 0)
-                .strokeBorder(Color.cyan.opacity(0.85), lineWidth: 3)
+                .strokeBorder(Color.cyan.opacity(0.85), lineWidth: strokeWidth)
             VStack {
                 HStack {
-                    Text("Target Preview")
+                    Text(copy.targetPreview)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
+                        .background(.black.opacity(badgeOpacity), in: RoundedRectangle(cornerRadius: 6))
                         .padding(12)
                     Spacer()
                 }
                 Spacer()
             }
         }
+        .accessibilityHidden(true)
     }
 }

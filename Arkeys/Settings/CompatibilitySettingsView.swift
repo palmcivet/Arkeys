@@ -4,6 +4,7 @@ import InputRuntime
 
 struct CompatibilitySettingsView: View {
     @EnvironmentObject private var runtime: InputRuntime
+    @State private var settingsOpenFailed = false
 
     var body: some View {
         Form {
@@ -62,7 +63,9 @@ struct CompatibilitySettingsView: View {
                 }
                 HStack {
                     Button("compat.status.grantPermission") {
-                        runtime.openAccessibilitySettings()
+                        if !runtime.openAccessibilitySettings() {
+                            settingsOpenFailed = true
+                        }
                     }
                     .disabled(runtime.capability?.accessibilityTrusted == true)
                     Button("compat.status.refresh") {
@@ -86,6 +89,10 @@ struct CompatibilitySettingsView: View {
         .onChange(of: runtime.capability?.summaryLine) { _, _ in
             ensureSelectedModeAvailable()
         }
+        .systemSettingsOpenFailedAlert(
+            isPresented: $settingsOpenFailed,
+            message: "compat.status.grantPermission.failed"
+        )
     }
 
     @ViewBuilder
@@ -98,11 +105,13 @@ struct CompatibilitySettingsView: View {
             Label {
                 Text(runtime.lastInjectSummary)
                     .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
                     .settingsMultilineLeading()
                     .textSelection(.enabled)
             } icon: {
                 Image(systemName: (runtime.lastInjectPosted ?? false) ? "checkmark.circle.fill" : "xmark.circle.fill")
                     .foregroundStyle((runtime.lastInjectPosted ?? false) ? .green : .red)
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -136,8 +145,14 @@ struct CompatibilitySettingsView: View {
     }
 
     private func statusText(_ value: Bool?) -> some View {
-        Text(boolLabel(value))
-            .foregroundStyle(value == true ? .green : (value == false ? .orange : .secondary))
+        labeledStatus(
+            boolLabel(value),
+            value: value,
+            on: .green,
+            off: .orange,
+            onSymbol: "checkmark.circle.fill",
+            offSymbol: "xmark.circle.fill"
+        )
     }
 
     private func availabilityText(_ value: Bool?) -> some View {
@@ -149,7 +164,33 @@ struct CompatibilitySettingsView: View {
         } else {
             text = "—"
         }
-        return Text(text)
-            .foregroundStyle(value == true ? .green : .secondary)
+        return labeledStatus(
+            text,
+            value: value,
+            on: .green,
+            off: .secondary,
+            onSymbol: "checkmark.circle.fill",
+            offSymbol: "minus.circle.fill"
+        )
+    }
+
+    private func labeledStatus(
+        _ text: String,
+        value: Bool?,
+        on: Color,
+        off: Color,
+        onSymbol: String,
+        offSymbol: String
+    ) -> some View {
+        HStack(spacing: 4) {
+            if let value {
+                Image(systemName: value ? onSymbol : offSymbol)
+                    .foregroundStyle(value ? on : off)
+                    .accessibilityHidden(true)
+            }
+            // Words carry the status; color on the icon is supplementary.
+            Text(text)
+                .foregroundStyle(.secondary)
+        }
     }
 }

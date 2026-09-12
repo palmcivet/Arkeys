@@ -10,6 +10,7 @@ struct AppPickerSheet: View {
     let onSelect: (SelectableApp) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var searchFieldFocused: Bool
     @State private var selectedID: String?
     @State private var query = ""
 
@@ -36,6 +37,7 @@ struct AppPickerSheet: View {
 
             TextField("picker.search", text: $query)
                 .textFieldStyle(.roundedBorder)
+                .focused($searchFieldFocused)
 
             List(filtered, id: \.id, selection: $selectedID) { app in
                 HStack(spacing: 10) {
@@ -43,10 +45,12 @@ struct AppPickerSheet: View {
                         Image(nsImage: icon)
                             .resizable()
                             .frame(width: 28, height: 28)
+                            .accessibilityHidden(true)
                     } else {
                         RoundedRectangle(cornerRadius: 6)
                             .fill(Color.secondary.opacity(0.2))
                             .frame(width: 28, height: 28)
+                            .accessibilityHidden(true)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         HStack {
@@ -65,6 +69,7 @@ struct AppPickerSheet: View {
                             .lineLimit(1)
                     }
                 }
+                .accessibilityElement(children: .combine)
                 .tag(app.id)
             }
             .onChange(of: selectedID) { _, newID in
@@ -99,8 +104,17 @@ struct AppPickerSheet: View {
         }
         .padding(20)
         .frame(width: 460, height: 520)
+        .defaultFocus($searchFieldFocused, true)
         .onDisappear {
             highlight.hide()
         }
     }
+}
+
+extension TargetHighlightCopy {
+    /// App catalog copy. Targeting does not read Localizable.xcstrings.
+    static let app = TargetHighlightCopy(
+        waitingStatus: String(localized: "picker.waiting"),
+        targetPreview: String(localized: "picker.targetPreview")
+    )
 }

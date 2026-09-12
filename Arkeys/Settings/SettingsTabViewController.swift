@@ -10,6 +10,7 @@ final class SettingsTabViewController: NSTabViewController {
 
     private let runtime: InputRuntime
     private let editorSession: EditorSession
+    private var motionObserver: NSObjectProtocol?
 
     enum Pane: Int, CaseIterable {
         case general
@@ -58,11 +59,27 @@ final class SettingsTabViewController: NSTabViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        if let motionObserver {
+            NotificationCenter.default.removeObserver(motionObserver)
+        }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         tabStyle = .toolbar
-        // Cross-fade pane content; toolbar icons stay put (native preference behavior).
-        transitionOptions = [.crossfade]
+        applyMotionPreference()
+        if motionObserver == nil {
+            motionObserver = NotificationCenter.default.addObserver(
+                forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.applyMotionPreference()
+                }
+            }
+        }
 
         for pane in Pane.allCases {
             let controller = makeViewController(for: pane)
@@ -130,7 +147,7 @@ final class SettingsTabViewController: NSTabViewController {
 
         guard abs(window.frame.height - newFrame.height) > 0.5 else { return }
 
-        if animated {
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.25
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
@@ -140,5 +157,11 @@ final class SettingsTabViewController: NSTabViewController {
         } else {
             window.setFrame(newFrame, display: true)
         }
+    }
+
+    private func applyMotionPreference() {
+        transitionOptions = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? []
+            : [.crossfade]
     }
 }

@@ -29,6 +29,7 @@ struct KeymapAppTable: NSViewRepresentable {
         tableView.addTableColumn(KeymapTableChrome.makeFlexibleColumn(id: KeymapAppTableCoordinator.nameColumnID))
         tableView.delegate = context.coordinator
         tableView.dataSource = context.coordinator
+        tableView.setAccessibilityLabel(String(localized: "keymap.apps.header"))
 
         context.coordinator.attach(tableView)
         return KeymapTableChrome.makeScrollView(tableView: tableView)
@@ -115,6 +116,7 @@ final class KeymapAppTableCoordinator: NSObject, NSTableViewDataSource, NSTableV
             let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
                 ?? KeymapTableChrome.makeImageCell(identifier: identifier, size: 12)
             cell.imageView?.image = checkImage(for: row)
+            cell.setAccessibilityElement(false)
             return cell
 
         case Self.iconColumnID:
@@ -122,6 +124,7 @@ final class KeymapAppTableCoordinator: NSObject, NSTableViewDataSource, NSTableV
             let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
                 ?? KeymapTableChrome.makeImageCell(identifier: identifier, size: 16)
             cell.imageView?.image = icon(for: target.bundleID)
+            cell.setAccessibilityElement(false)
             return cell
 
         default:
@@ -130,12 +133,20 @@ final class KeymapAppTableCoordinator: NSObject, NSTableViewDataSource, NSTableV
                 ?? makeNameCell(identifier: identifier)
             cell.textField?.stringValue = target.appName
             cell.textField?.toolTip = target.bundleID
+            let count = localized(
+                "keymap.apps.count",
+                default: "\(target.schemes.count) schemes"
+            )
             if let countField = cell.viewWithTag(Self.countLabelTag) as? NSTextField {
-                countField.stringValue = localized(
-                    "keymap.apps.count",
-                    default: "\(target.schemes.count) schemes"
-                )
+                countField.stringValue = count
+                countField.setAccessibilityElement(false)
             }
+            cell.textField?.setAccessibilityElement(false)
+            cell.setAccessibilityElement(true)
+            cell.setAccessibilityLabel(localized(
+                "keymap.apps.row",
+                default: "\(target.appName), \(count)"
+            ))
             return cell
         }
     }

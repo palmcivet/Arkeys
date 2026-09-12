@@ -5,6 +5,7 @@ import KeymapCore
 
 struct GeneralSettingsView: View {
     @EnvironmentObject private var runtime: InputRuntime
+    @State private var settingsOpenFailed = false
 
     var body: some View {
         Form {
@@ -32,7 +33,9 @@ struct GeneralSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 Button("general.language.openSystemSettings") {
-                    openSystemLanguageSettings()
+                    if !openSystemLanguageSettings() {
+                        settingsOpenFailed = true
+                    }
                 }
             } footer: {
                 SettingsFooter("general.language.footer")
@@ -40,6 +43,10 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
+        .systemSettingsOpenFailedAlert(
+            isPresented: $settingsOpenFailed,
+            message: "general.language.openFailed"
+        )
     }
 
     /// Language currently resolved for this process (system or per-app override).
@@ -53,16 +60,11 @@ struct GeneralSettingsView: View {
         return Locale.current.localizedString(forLanguageCode: id) ?? id
     }
 
-    private func openSystemLanguageSettings() {
+    private func openSystemLanguageSettings() -> Bool {
         // Language & Region in System Settings (macOS Ventura+).
-        let candidates = [
+        SystemSettingsOpener.open([
             "x-apple.systempreferences:com.apple.Localization-Settings.extension",
             "x-apple.systempreferences:com.apple.Localization",
-        ]
-        for candidate in candidates {
-            if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
-                return
-            }
-        }
+        ])
     }
 }

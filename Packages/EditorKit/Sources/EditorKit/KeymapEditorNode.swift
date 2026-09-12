@@ -6,11 +6,14 @@ struct KeymapEditorNode: View {
     let shape: KeymapButtonShape
     let style: KeymapKeycap.Style
     let scale: CGFloat
+    var copy: EditorChromeCopy = .english
     let onDelete: () -> Void
     let onSelect: () -> Void
     let onMove: (CGPoint) -> Void
     let onResize: (CGPoint) -> Void
     let onGestureEnd: () -> Void
+    let onNudge: (Double, Double) -> Void
+    let onAdjustSize: (Double) -> Void
 
     private var isSelected: Bool { style == .selected }
 
@@ -24,16 +27,34 @@ struct KeymapEditorNode: View {
                 .gesture(moveGesture)
                 .onTapGesture(perform: onSelect)
         }
+        // Keep this above the overlays so delete / resize stay their own VoiceOver elements.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityHint(copy.keyHint)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : [.isButton])
+        .accessibilityAction {
+            onSelect()
+        }
+        .accessibilityAction(named: Text(copy.moveLeft)) { onNudge(-1, 0) }
+        .accessibilityAction(named: Text(copy.moveRight)) { onNudge(1, 0) }
+        .accessibilityAction(named: Text(copy.moveUp)) { onNudge(0, -1) }
+        .accessibilityAction(named: Text(copy.moveDown)) { onNudge(0, 1) }
         .frame(width: box.width + pad * 2, height: box.height + pad * 2)
         .overlay(alignment: .topLeading) {
             if isSelected {
-                EditorDeleteHandle(action: onDelete)
+                EditorDeleteHandle(copy: copy, action: onDelete)
                     .offset(x: pull.width, y: pull.height)
             }
         }
         .overlay(alignment: .bottomTrailing) {
             if isSelected {
-                EditorResizeHandle(onChanged: onResize, onEnded: onGestureEnd)
+                EditorResizeHandle(
+                    copy: copy,
+                    scale: scale,
+                    onChanged: onResize,
+                    onEnded: onGestureEnd,
+                    onAdjustSize: onAdjustSize
+                )
                     .offset(x: -pull.width, y: -pull.height)
             }
         }
@@ -51,26 +72,53 @@ struct KeymapEditorNode: View {
 }
 
 private struct EditorDeleteHandle: View {
+    let copy: EditorChromeCopy
     let action: () -> Void
 
     var body: some View {
-        EditorHandleChrome(systemName: "xmark")
-            .contentShape(Circle())
-            .help("Delete")
-            .accessibilityLabel("Delete key")
-            .highPriorityGesture(TapGesture().onEnded(action))
+        Button(action: action) {
+            EditorHandleChrome(systemName: "xmark")
+                .padding(4)
+                .contentShape(Circle())
+                .padding(-4)
+        }
+        .buttonStyle(.plain)
+        .help(copy.deleteHelp)
+        .accessibilityLabel(copy.deleteKey)
     }
 }
 
 private struct EditorResizeHandle: View {
+    let copy: EditorChromeCopy
+    let scale: CGFloat
     let onChanged: (CGPoint) -> Void
     let onEnded: () -> Void
+    let onAdjustSize: (Double) -> Void
+
+    private var sizePercent: Int {
+        Int((Double(scale) * 100).rounded())
+    }
 
     var body: some View {
         EditorHandleChrome(systemName: "arrow.up.left.and.arrow.down.right")
+            .padding(4)
             .contentShape(Circle())
-            .help("Resize")
-            .accessibilityLabel("Resize key")
+            .padding(-4)
+            .help(copy.resizeHelp)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(copy.resizeKey)
+            .accessibilityValue("\(sizePercent)%")
+            .accessibilityHint(copy.resizeHint)
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment:
+                    onAdjustSize(KeymapEditorController.sizeFactor)
+                case .decrement:
+                    onAdjustSize(1 / KeymapEditorController.sizeFactor)
+                @unknown default:
+                    break
+                }
+            }
             .highPriorityGesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named("keymapCanvas"))
                     .onChanged { value in
@@ -91,6 +139,7 @@ private struct EditorHandleChrome: View {
             .font(.system(size: EditorHandleLayout.glyph, weight: .semibold))
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(Color.white)
+            .accessibilityHidden(true)
             .frame(width: EditorHandleLayout.side, height: EditorHandleLayout.side)
             .background(Circle().fill(KeycapChrome.fill))
             .overlay(Circle().stroke(Color.white.opacity(0.92), lineWidth: 1))

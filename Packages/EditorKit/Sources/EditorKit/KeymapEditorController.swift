@@ -18,7 +18,7 @@ public final class KeymapEditorController: ObservableObject {
     @Published public var selectedID: UUID?
     @Published public var isActive: Bool = false
     @Published public var buttonShape: KeymapButtonShape = .circle
-    @Published public var statusText: String = KeymapEditorController.idleStatus
+    @Published public var statusText: String = EditorChromeCopy.english.idleStatus
     @Published var chromeEdge: EditorChromeEdge = .bottom
     @Published private var dragPreview: DragPreview?
     public var chromeCopy = EditorChromeCopy.english
@@ -46,9 +46,6 @@ public final class KeymapEditorController: ObservableObject {
     /// Host Settings (or other Arkeys UI) is key — hide so the mask cannot cover it.
     public var shouldHideForHostUI: () -> Bool = { false }
 
-    static let idleStatus = "Click empty area to add"
-    private static let waitingStatus = "Waiting for target window…"
-
     public init(keymap: CanonicalKeymap = CanonicalKeymap()) {
         self.keymap = keymap
     }
@@ -64,7 +61,7 @@ public final class KeymapEditorController: ObservableObject {
         self.canvasSize = .zero
         self.chromeBarSize = EditorChromeDodge.estimatedBarSize
         self.isActive = true
-        setStatus(Self.idleStatus)
+        setStatus(chromeCopy.idleStatus)
         ensureOverlay()
         startFollowing()
         activateTarget()
@@ -85,12 +82,12 @@ public final class KeymapEditorController: ObservableObject {
 
     public func bindKey(keyCode: UInt16, name: String) {
         guard let selectedID, var button = button(id: selectedID) else {
-            setStatus("Select a button first, then press a key")
+            setStatus(chromeCopy.selectButtonFirst)
             return
         }
         button.key = .virtual(keyCode, name: name)
         keymap.upsertButton(button)
-        setStatus("Bound \(name) — press a key · drag · × to delete")
+        setStatus(chromeCopy.boundStatus(name: name))
     }
 
     public func addButton(atNormalized point: CGPoint) {
@@ -100,7 +97,7 @@ public final class KeymapEditorController: ObservableObject {
         )
         keymap.elements.append(.button(button))
         selectedID = button.id
-        setStatus(selectedStatus(for: button.key.name))
+        setStatus(chromeCopy.selectedStatus(name: button.key.name))
     }
 
     func deleteElement(id: UUID) {
@@ -111,12 +108,12 @@ public final class KeymapEditorController: ObservableObject {
         if dragPreview?.id == id {
             dragPreview = nil
         }
-        setStatus("Deleted")
+        setStatus(chromeCopy.deleted)
     }
 
     func select(_ button: ButtonElement) {
         selectedID = button.id
-        setStatus(selectedStatus(for: button.key.name))
+        setStatus(chromeCopy.selectedStatus(name: button.key.name))
     }
 
     func displayedTransform(for button: ButtonElement) -> NormalizedTransform {
@@ -170,7 +167,7 @@ public final class KeymapEditorController: ObservableObject {
         guard let dragPreview else { return }
         applyTransform(id: dragPreview.id, x: dragPreview.x, y: dragPreview.y, size: dragPreview.size)
         if let name = button(id: dragPreview.id)?.key.name {
-            setStatus(selectedStatus(for: name))
+            setStatus(chromeCopy.selectedStatus(name: name))
         }
         self.dragPreview = nil
         refreshChromeEdge()
@@ -216,15 +213,58 @@ public final class KeymapEditorController: ObservableObject {
         keymap.upsertButton(button)
     }
 
-    private func selectedStatus(for name: String) -> String {
-        "Selected \(name) — press a key · drag · × to delete"
+    /// Normalized canvas step for VoiceOver / keyboard nudge actions.
+    static let nudgeStep = 0.02
+    /// Uniform scale applied by the resize handle's increment / decrement actions.
+    static let sizeFactor = 1.1
+
+    func nudge(id: UUID, dx: Double, dy: Double) {
+        guard let button = button(id: id) else { return }
+        if selectedID != id {
+            select(button)
+        }
+        applyTransform(
+            id: id,
+            x: min(max(button.transform.x + dx * Self.nudgeStep, 0), 1),
+            y: min(max(button.transform.y + dy * Self.nudgeStep, 0), 1),
+            size: button.transform.size
+        )
+        refreshChromeEdge()
+    }
+
+    func adjustSize(id: UUID, factor: Double) {
+        guard let button = button(id: id) else { return }
+        if selectedID != id {
+            select(button)
+        }
+        applyTransform(
+            id: id,
+            x: button.transform.x,
+            y: button.transform.y,
+            size: button.transform.size * factor
+        )
+        refreshChromeEdge()
     }
 
     private func setStatus(_ text: String) {
         if statusText != text {
             statusText = text
+            announceStatus(text)
         }
         refreshChromeEdge()
+    }
+
+    private func announceStatus(_ text: String) {
+        guard let overlayWindow else { return }
+        NSAccessibility.post(
+            element: overlayWindow,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: text,
+                NSAccessibility.NotificationUserInfoKey(rawValue: "NSAccessibilityAnnouncementPriorityKey"):
+                    NSAccessibilityPriorityLevel.medium,
+            ]
+        )
     }
 
     private func refreshChromeEdge() {
@@ -347,8 +387,8 @@ public final class KeymapEditorController: ObservableObject {
         guard let targetBundleID,
               let app = RunningAppCatalog.runningApplication(bundleID: targetBundleID),
               let frame = TargetResolver.primaryWindowFrame(for: app) else {
-            if statusText != Self.waitingStatus {
-                statusText = Self.waitingStatus
+            if statusText != chromeCopy.waitingStatus {
+                setStatus(chromeCopy.waitingStatus)
             }
             hideOverlay()
             return
@@ -450,6 +490,7 @@ private struct EditorChromeContentWidthKey: PreferenceKey {
 
 struct KeymapEditorRootView: View {
     @ObservedObject var controller: KeymapEditorController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -479,7 +520,7 @@ struct KeymapEditorRootView: View {
             .onPreferenceChange(EditorChromeBarSizeKey.self) { size in
                 controller.noteChromeMetrics(canvas: canvas, barSize: size)
             }
-            .animation(.easeOut(duration: 0.24), value: controller.chromeEdge)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: controller.chromeEdge)
         }
     }
 }
@@ -502,6 +543,9 @@ private struct KeymapEditorChromeBar: View {
             onCancel: { controller.cancel() },
             onDone: { controller.finish() }
         )
+        .accessibilityAction(named: Text(controller.chromeCopy.addKey)) {
+            controller.addButton(atNormalized: CGPoint(x: 0.5, y: 0.5))
+        }
         .frame(width: width)
         .background {
             EditorChromeBarContent(
@@ -573,20 +617,32 @@ private struct EditorChromeHairline: View {
         Rectangle()
             .fill(.white.opacity(0.12))
             .frame(width: 1, height: 14)
+            .accessibilityHidden(true)
     }
 }
 
 /// Dark HUD plate: material + scrim so light mode cannot bleach it into a search field.
 private struct EditorChromeMaterial: View {
     var cornerRadius: CGFloat
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape
-            .fill(.ultraThinMaterial)
-            .overlay { shape.fill(Color.black.opacity(0.38)) }
-            .shadow(color: .black.opacity(0.32), radius: 12, y: 3)
-            .overlay { shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5) }
+        let strokeOpacity = contrast == .increased ? 0.32 : 0.10
+        let strokeWidth: CGFloat = contrast == .increased ? 1 : 0.5
+        Group {
+            if reduceTransparency {
+                shape.fill(Color(white: 0.14))
+            } else {
+                shape
+                    .fill(.ultraThinMaterial)
+                    .overlay { shape.fill(Color.black.opacity(0.38)) }
+            }
+        }
+        .shadow(color: .black.opacity(reduceTransparency ? 0.18 : 0.32), radius: 12, y: 3)
+        .overlay { shape.strokeBorder(Color.white.opacity(strokeOpacity), lineWidth: strokeWidth) }
+        .accessibilityHidden(true)
     }
 }
 
@@ -619,6 +675,7 @@ public struct KeymapEditorCanvas: View {
             ZStack {
                 Color.black.opacity(0.18)
                     .contentShape(Rectangle())
+                    .accessibilityHidden(true)
                     .gesture(
                         SpatialTapGesture()
                             .onEnded { event in
@@ -667,6 +724,7 @@ public struct KeymapEditorCanvas: View {
             shape: controller.buttonShape,
             style: selected ? .selected : .normal,
             scale: KeycapChrome.scale(for: transform.size),
+            copy: controller.chromeCopy,
             onDelete: { controller.deleteElement(id: button.id) },
             onSelect: { controller.select(button) },
             onMove: { location in
@@ -683,7 +741,13 @@ public struct KeymapEditorCanvas: View {
                     canvas: size
                 )
             },
-            onGestureEnd: { controller.endDrag() }
+            onGestureEnd: { controller.endDrag() },
+            onNudge: { dx, dy in
+                controller.nudge(id: button.id, dx: dx, dy: dy)
+            },
+            onAdjustSize: { factor in
+                controller.adjustSize(id: button.id, factor: factor)
+            }
         )
         .position(
             x: transform.x * size.width,
@@ -700,6 +764,7 @@ public struct KeymapEditorCanvas: View {
         )
             .position(x: transform.x * size.width, y: transform.y * size.height)
             .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
 }

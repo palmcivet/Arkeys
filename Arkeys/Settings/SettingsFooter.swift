@@ -44,3 +44,16 @@ func localized(
 ) -> String {
     String(localized: localizedResource(key, default: value))
 }
+
+extension View {
+    func systemSettingsOpenFailedAlert(
+        isPresented: Binding<Bool>,
+        message: LocalizedStringKey
+    ) -> some View {
+        alert("settings.openFailed.title", isPresented: isPresented) {
+            Button("common.ok") {}
+        } message: {
+            Text(message)
+        }
+    }
+}

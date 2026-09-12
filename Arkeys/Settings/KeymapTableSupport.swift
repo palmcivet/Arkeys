@@ -37,8 +37,7 @@ enum KeymapTableMetrics {
 }
 
 enum KeymapTableChrome {
-    static func makeTableView(rowHeight: CGFloat = KeymapTableMetrics.rowHeight) -> NSTableView {
-        let tableView = NSTableView()
+    static func configure(_ tableView: NSTableView, rowHeight: CGFloat = KeymapTableMetrics.rowHeight) {
         tableView.headerView = nil
         tableView.style = .fullWidth
         tableView.selectionHighlightStyle = .regular
@@ -51,6 +50,11 @@ enum KeymapTableChrome {
         tableView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
         tableView.usesAlternatingRowBackgroundColors = false
         tableView.backgroundColor = .controlBackgroundColor
+    }
+
+    static func makeTableView(rowHeight: CGFloat = KeymapTableMetrics.rowHeight) -> NSTableView {
+        let tableView = NSTableView()
+        configure(tableView, rowHeight: rowHeight)
         return tableView
     }
 

@@ -157,6 +157,20 @@ final class EditorChromeLayoutTests: XCTestCase {
         XCTAssertGreaterThan(frame.width, 0)
     }
 
+    func testBoundStatusSubstitutesName() {
+        XCTAssertEqual(
+            EditorChromeCopy.english.boundStatus(name: "W"),
+            "Bound W — press a key · drag · × to delete"
+        )
+    }
+
+    func testSelectedStatusSubstitutesName() {
+        XCTAssertEqual(
+            EditorChromeCopy.english.selectedStatus(name: "Shift"),
+            "Selected Shift — press a key · drag · × to delete"
+        )
+    }
+
     func testHysteresisDoesNotFlipForDistantKeycap() {
         let far = CGRect(x: 360, y: 400, width: 80, height: 40)
         let edge = EditorChromeDodge.resolve(

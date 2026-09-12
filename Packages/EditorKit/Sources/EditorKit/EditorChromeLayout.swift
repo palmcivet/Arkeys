@@ -6,17 +6,99 @@ enum EditorChromeEdge: Equatable {
     case bottom
 }
 
-/// Host-supplied chrome titles. EditorKit does not read the app string catalog.
+/// Host-supplied chrome and VoiceOver copy. EditorKit does not read the app catalog.
 public struct EditorChromeCopy: Equatable, Sendable {
     public var cancel: String
     public var done: String
+    public var idleStatus: String
+    public var waitingStatus: String
+    public var selectButtonFirst: String
+    public var boundFormat: String
+    public var deleted: String
+    public var selectedFormat: String
+    public var deleteKey: String
+    public var resizeKey: String
+    public var deleteHelp: String
+    public var resizeHelp: String
+    public var resizeHint: String
+    public var keyHint: String
+    public var addKey: String
+    public var moveLeft: String
+    public var moveRight: String
+    public var moveUp: String
+    public var moveDown: String
 
-    public init(cancel: String, done: String) {
+    public init(
+        cancel: String,
+        done: String,
+        idleStatus: String,
+        waitingStatus: String,
+        selectButtonFirst: String,
+        boundFormat: String,
+        deleted: String,
+        selectedFormat: String,
+        deleteKey: String,
+        resizeKey: String,
+        deleteHelp: String,
+        resizeHelp: String,
+        resizeHint: String,
+        keyHint: String,
+        addKey: String,
+        moveLeft: String,
+        moveRight: String,
+        moveUp: String,
+        moveDown: String
+    ) {
         self.cancel = cancel
         self.done = done
+        self.idleStatus = idleStatus
+        self.waitingStatus = waitingStatus
+        self.selectButtonFirst = selectButtonFirst
+        self.boundFormat = boundFormat
+        self.deleted = deleted
+        self.selectedFormat = selectedFormat
+        self.deleteKey = deleteKey
+        self.resizeKey = resizeKey
+        self.deleteHelp = deleteHelp
+        self.resizeHelp = resizeHelp
+        self.resizeHint = resizeHint
+        self.keyHint = keyHint
+        self.addKey = addKey
+        self.moveLeft = moveLeft
+        self.moveRight = moveRight
+        self.moveUp = moveUp
+        self.moveDown = moveDown
     }
 
-    public static let english = EditorChromeCopy(cancel: "Cancel", done: "Done")
+    public static let english = EditorChromeCopy(
+        cancel: "Cancel",
+        done: "Done",
+        idleStatus: "Click empty area to add",
+        waitingStatus: "Waiting for target window…",
+        selectButtonFirst: "Select a button first, then press a key",
+        boundFormat: "Bound %@ — press a key · drag · × to delete",
+        deleted: "Deleted",
+        selectedFormat: "Selected %@ — press a key · drag · × to delete",
+        deleteKey: "Delete key",
+        resizeKey: "Resize key",
+        deleteHelp: "Delete",
+        resizeHelp: "Resize",
+        resizeHint: "Drag or adjust to resize",
+        keyHint: "Press a key to bind. Drag or use actions to move.",
+        addKey: "Add key at center",
+        moveLeft: "Move left",
+        moveRight: "Move right",
+        moveUp: "Move up",
+        moveDown: "Move down"
+    )
+
+    public func boundStatus(name: String) -> String {
+        String(format: boundFormat, locale: .current, arguments: [name])
+    }
+
+    public func selectedStatus(name: String) -> String {
+        String(format: selectedFormat, locale: .current, arguments: [name])
+    }
 }
 
 /// In-canvas HUD dodge: stay put until the selected or dragged keycap enters

@@ -3,6 +3,7 @@ import Combine
 import SwiftUI
 import InputRuntime
 import EditorKit
+import Targeting
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
@@ -59,6 +60,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         setupOverlayWindow()
         NotificationCenter.default.addObserver(self, selector: #selector(handleShowClickOverlay), name: .showClickOverlay, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleHideClickOverlay), name: .hideClickOverlay, object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidChangeVisibility(_:)),
+            name: NSWindow.didBecomeKeyNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidChangeVisibility(_:)),
+            name: NSWindow.didChangeOcclusionStateNotification,
+            object: nil
+        )
+        NSApp.windows.forEach(hideCommandHostIfNeeded)
     }
 
     /// Dock click / Finder reopen. Overlay and HUD windows can make
@@ -183,8 +197,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         overlayWindow?.backgroundColor = .clear
         overlayWindow?.level = .floating
         overlayWindow?.ignoresMouseEvents = true
-        overlayWindow?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        overlayWindow?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         overlayWindow?.contentView = NSHostingView(rootView: ClickOverlayView())
+        overlayWindow?.hideFromAccessibility()
+    }
+
+    @objc private func windowDidChangeVisibility(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        hideCommandHostIfNeeded(window)
+    }
+
+    /// The SwiftUI `Window` is only a command host. Keep it out of the Window
+    /// menu and the cycle list if AppKit materializes it.
+    private func hideCommandHostIfNeeded(_ window: NSWindow) {
+        let id = window.identifier?.rawValue ?? ""
+        let isCommandHost = id == "command-host" || id.hasSuffix(".command-host")
+            || (window.title == "Arkeys" && window.styleMask.contains(.titled) && window !== settingsWindow)
+        guard isCommandHost else { return }
+        window.isExcludedFromWindowsMenu = true
+        window.collectionBehavior.insert(.ignoresCycle)
+        if window.isVisible {
+            window.orderOut(nil)
+        }
     }
 
     @objc func handleShowClickOverlay(notification: Notification) {

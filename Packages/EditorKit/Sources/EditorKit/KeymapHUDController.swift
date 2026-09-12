@@ -106,6 +106,7 @@ public final class KeymapHUDController: ObservableObject {
         window.becomesKeyOnlyIfNeeded = true
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         window.contentView = NSHostingView(rootView: KeymapHUDView(controller: self))
+        window.hideFromAccessibility()
         overlayWindow = window
     }
 
@@ -266,6 +267,7 @@ private struct KeymapHUDView: View {
             }
         }
         .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder

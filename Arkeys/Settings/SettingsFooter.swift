@@ -18,7 +18,15 @@ struct SettingsFooter: View {
         Text(key)
             .font(.system(size: NSFont.smallSystemFontSize))
             .foregroundStyle(.secondary)
+            .settingsMultilineLeading()
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension Text {
+    /// macOS `Form` inherits trailing multiline alignment; settings copy stays leading.
+    func settingsMultilineLeading() -> some View {
+        multilineTextAlignment(.leading)
     }
 }

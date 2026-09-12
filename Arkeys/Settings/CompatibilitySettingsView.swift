@@ -93,10 +93,12 @@ struct CompatibilitySettingsView: View {
         if runtime.lastInjectSummary.isEmpty {
             Text("compat.test.none")
                 .foregroundStyle(.secondary)
+                .settingsMultilineLeading()
         } else {
             Label {
                 Text(runtime.lastInjectSummary)
                     .font(.system(.caption, design: .monospaced))
+                    .settingsMultilineLeading()
                     .textSelection(.enabled)
             } icon: {
                 Image(systemName: (runtime.lastInjectPosted ?? false) ? "checkmark.circle.fill" : "xmark.circle.fill")

@@ -104,38 +104,48 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         overlay.isEnabled = !editing
         menu.addItem(overlay)
 
-        let schemeRoot = NSMenuItem(
-            title: String(localized: "menu.scheme"),
-            action: nil,
-            keyEquivalent: ""
-        )
-        let schemeMenu = NSMenu()
-        if runtime.schemes.isEmpty {
+        menu.addItem(NSMenuItem.separator())
+
+        let targets = runtime.configuredTargets
+        if targets.isEmpty {
             let empty = NSMenuItem(
                 title: String(localized: "menu.noSchemes"),
                 action: nil,
                 keyEquivalent: ""
             )
             empty.isEnabled = false
-            schemeMenu.addItem(empty)
-            schemeRoot.isEnabled = false
+            menu.addItem(empty)
         } else {
-            for scheme in runtime.schemes {
-                let item = NSMenuItem(
-                    title: scheme.name,
-                    action: #selector(selectScheme(_:)),
+            for target in targets {
+                let targetItem = NSMenuItem(
+                    title: target.appName,
+                    action: nil,
                     keyEquivalent: ""
                 )
-                item.target = self
-                item.representedObject = scheme.id
-                item.state = (scheme.id == runtime.activeSchemeID) ? .on : .off
-                item.isEnabled = !editing
-                schemeMenu.addItem(item)
+                targetItem.state = (target.bundleID == runtime.targetBundleID) ? .on : .off
+                targetItem.isEnabled = !editing
+                let schemeMenu = NSMenu()
+                for scheme in target.schemes {
+                    let item = NSMenuItem(
+                        title: scheme.name,
+                        action: #selector(selectTargetScheme(_:)),
+                        keyEquivalent: ""
+                    )
+                    item.target = self
+                    item.representedObject = TargetSchemeRef(
+                        bundleID: target.bundleID,
+                        schemeID: scheme.id
+                    )
+                    let isActive = target.bundleID == runtime.targetBundleID
+                        && scheme.id == runtime.activeSchemeID
+                    item.state = isActive ? .on : .off
+                    item.isEnabled = !editing
+                    schemeMenu.addItem(item)
+                }
+                targetItem.submenu = schemeMenu
+                menu.addItem(targetItem)
             }
-            schemeRoot.isEnabled = !editing
         }
-        schemeRoot.submenu = schemeMenu
-        menu.addItem(schemeRoot)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -198,12 +208,22 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         runtime?.showKeymapOverlay.toggle()
     }
 
-    @objc private func selectScheme(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? UUID else { return }
-        runtime?.selectScheme(id: id)
+    @objc private func selectTargetScheme(_ sender: NSMenuItem) {
+        guard let ref = sender.representedObject as? TargetSchemeRef else { return }
+        runtime?.switchTo(bundleID: ref.bundleID, schemeID: ref.schemeID)
     }
 
     @objc private func openSettings() {
         onOpenSettings?()
+    }
+}
+
+private final class TargetSchemeRef: NSObject {
+    let bundleID: String
+    let schemeID: UUID
+
+    init(bundleID: String, schemeID: UUID) {
+        self.bundleID = bundleID
+        self.schemeID = schemeID
     }
 }

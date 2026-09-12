@@ -5,13 +5,30 @@ import KeymapCore
 import Injection
 import Targeting
 
+/// A target app that already has at least one saved keymap scheme.
+public struct ConfiguredTarget: Identifiable, Hashable, Sendable {
+    public var id: String { bundleID }
+    public let bundleID: String
+    public let appName: String
+    public let schemes: [KeymapSchemeMeta]
+    public let activeSchemeID: UUID?
+
+    public init(bundleID: String, appName: String, schemes: [KeymapSchemeMeta], activeSchemeID: UUID?) {
+        self.bundleID = bundleID
+        self.appName = appName
+        self.schemes = schemes
+        self.activeSchemeID = activeSchemeID
+    }
+}
+
 @MainActor
 public final class InputRuntime: ObservableObject {
     @Published public var targetBundleID: String?
-    @Published public var targetAppName: String = "(none)"
+    @Published public var targetAppName: String?
     @Published public var keymap: CanonicalKeymap = CanonicalKeymap()
     @Published public var schemes: [KeymapSchemeMeta] = []
     @Published public var activeSchemeID: UUID?
+    @Published public var configuredTargets: [ConfiguredTarget] = []
     @Published public var injectMode: InjectMode = .cascade {
         didSet { persistSettings() }
     }
@@ -48,6 +65,7 @@ public final class InputRuntime: ObservableObject {
     private var didStart = false
     private var isRestoringSettings = false
     private var pendingInjectModeRaw: String?
+    private var persistTask: Task<Void, Never>?
     /// Last non-Arkeys app that was frontmost — used by Compatibility Test Click.
     private var previousFrontmostApp: NSRunningApplication?
     private var frontmostObserver: NSObjectProtocol?
@@ -126,10 +144,19 @@ public final class InputRuntime: ObservableObject {
             return
         }
         targetBundleID = bundleID
-        targetAppName = appName ?? RunningAppCatalog.runningApplication(bundleID: bundleID)?.localizedName ?? bundleID
+        targetAppName = appName ?? resolvedAppName(bundleID: bundleID, stored: nil)
         reloadSchemesFromStore()
-        persistSettings()
-        AppLog.log(.target, "bound target=\(targetAppName) id=\(bundleID)")
+        persistTargetDisplayName()
+        persistSettingsNow()
+        AppLog.log(.target, "bound target=\(targetAppName ?? bundleID) id=\(bundleID)")
+    }
+
+    /// Bind a target and activate one of its schemes in a single step.
+    public func switchTo(bundleID: String, schemeID: UUID) {
+        if targetBundleID != bundleID {
+            bind(bundleID: bundleID)
+        }
+        selectScheme(id: schemeID)
     }
 
     /// Create a blank Arkeys keymap scheme for the current target and persist it.
@@ -144,7 +171,9 @@ public final class InputRuntime: ObservableObject {
             let meta = try store.create(keymap: blank, bundleID: targetBundleID, name: name)
             activeSchemeID = meta.id
             keymap = blank
+            persistTargetDisplayName()
             refreshSchemesList()
+            refreshConfiguredTargets()
             AppLog.log(.target, "created new empty keymap for \(targetBundleID)")
             return true
         } catch {
@@ -160,12 +189,14 @@ public final class InputRuntime: ObservableObject {
     public func selectScheme(id: UUID) {
         guard let targetBundleID else { return }
         guard schemes.contains(where: { $0.id == id }) else { return }
+        guard activeSchemeID != id else { return }
         do {
             try store.setActive(schemeID: id, bundleID: targetBundleID)
             activeSchemeID = id
             if let loaded = store.load(bundleID: targetBundleID, schemeID: id) {
                 keymap = loaded
             }
+            refreshConfiguredTargets()
             AppLog.log(.target, "selected scheme \(id.uuidString)")
         } catch {
             AppLog.log(.target, "select scheme failed: \(error.localizedDescription)")
@@ -179,8 +210,43 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.rename(schemeID: id, bundleID: targetBundleID, name: trimmed)
             refreshSchemesList()
+            refreshConfiguredTargets()
         } catch {
             AppLog.log(.target, "rename failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Copy the active scheme onto another target. Stays on the current target.
+    @discardableResult
+    public func copyActiveScheme(toBundleID: String, appName: String? = nil, name: String? = nil) -> Bool {
+        guard let fromBundleID = targetBundleID, let schemeID = activeSchemeID else {
+            AppLog.log(.target, "cannot copy — no active scheme")
+            return false
+        }
+        if toBundleID == Bundle.main.bundleIdentifier {
+            AppLog.log(.target, "skip copy onto self")
+            return false
+        }
+        do {
+            let sourceName = schemes.first { $0.id == schemeID }?.name
+            let meta = try store.copyScheme(
+                fromBundleID: fromBundleID,
+                schemeID: schemeID,
+                toBundleID: toBundleID,
+                name: name ?? sourceName
+            )
+            if let appName, !appName.isEmpty {
+                store.setDisplayName(appName, bundleID: toBundleID)
+            }
+            if toBundleID == fromBundleID {
+                refreshSchemesList()
+            }
+            refreshConfiguredTargets()
+            AppLog.log(.target, "copied scheme \(meta.id) to \(toBundleID)")
+            return true
+        } catch {
+            AppLog.log(.target, "copy failed: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -189,6 +255,7 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.save(keymap, bundleID: targetBundleID, schemeID: activeSchemeID)
             refreshSchemesList()
+            refreshConfiguredTargets()
             AppLog.log(.target, "saved keymap for \(targetBundleID) scheme=\(activeSchemeID)")
         } catch {
             AppLog.log(.target, "save failed: \(error.localizedDescription)")
@@ -214,8 +281,10 @@ public final class InputRuntime: ObservableObject {
             let meta = try store.create(keymap: map, bundleID: targetBundleID, name: name)
             activeSchemeID = meta.id
             keymap = map
+            persistTargetDisplayName()
             refreshSchemesList()
-            persistSettings()
+            refreshConfiguredTargets()
+            persistSettingsNow()
         } catch {
             AppLog.log(.target, "import save failed: \(error.localizedDescription)")
         }
@@ -231,9 +300,29 @@ public final class InputRuntime: ObservableObject {
         do {
             try store.delete(schemeID: activeSchemeID, bundleID: targetBundleID)
             reloadSchemesFromStore()
+            refreshConfiguredTargets()
             AppLog.log(.target, "deleted scheme \(activeSchemeID)")
         } catch {
             AppLog.log(.target, "delete failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Remove every saved scheme for a target. If it is the current target,
+    /// bind another remaining library or clear the selection.
+    public func deleteTarget(bundleID: String) {
+        do {
+            try store.deleteTarget(bundleID: bundleID)
+            AppLog.log(.target, "deleted target library \(bundleID)")
+            refreshConfiguredTargets()
+            if targetBundleID == bundleID {
+                if let next = configuredTargets.first {
+                    bind(bundleID: next.bundleID, appName: next.appName)
+                } else {
+                    clearTarget()
+                }
+            }
+        } catch {
+            AppLog.log(.target, "delete target failed: \(error.localizedDescription)")
         }
     }
 
@@ -312,15 +401,15 @@ public final class InputRuntime: ObservableObject {
     private func installLocalKeyMonitorIfNeeded() {
         guard localKeyMonitor == nil else { return }
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            Task { @MainActor in
-                self?.handleKeyEvent(event, source: "local")
+            guard let self else { return event }
+            let stroke = KeyStroke(event)
+            var swallowEscape = false
+            self.dispatchKeyStroke(stroke, source: "local") { editing in
+                // Swallow Escape while editing so AppKit does not treat it as cancel.
+                // Esc is a bindable key (e.g. game "back"), not an editor dismiss shortcut.
+                swallowEscape = stroke.keyCode == CarbonKeyNames.escapeKeyCode && editing
             }
-            // Swallow Escape while editing so AppKit does not treat it as cancel.
-            // Esc is a bindable key (e.g. game "back"), not an editor dismiss shortcut.
-            if event.keyCode == CarbonKeyNames.escapeKeyCode, self?.isEditing == true {
-                return nil
-            }
-            return event
+            return swallowEscape ? nil : event
         }
     }
 
@@ -343,9 +432,7 @@ public final class InputRuntime: ObservableObject {
 
     private func installGlobalKeyMonitor() {
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            Task { @MainActor in
-                self?.handleKeyEvent(event, source: "global")
-            }
+            self?.dispatchKeyStroke(KeyStroke(event), source: "global")
         }
         if globalKeyMonitor == nil {
             AppLog.log(.capability, "global key monitor FAILED — grant Accessibility access")
@@ -482,10 +569,43 @@ public final class InputRuntime: ObservableObject {
         }
     }
 
-    private func handleKeyEvent(_ event: NSEvent, source: String) {
-        if event.isARepeat { return }
+    /// Copy key data off `NSEvent` so monitor callbacks never hop a non-Sendable object.
+    private struct KeyStroke: Sendable {
+        let keyCode: UInt16
+        let isARepeat: Bool
+        let characters: String
+        let modifierFlags: UInt
 
-        let keyCode = event.keyCode
+        init(_ event: NSEvent) {
+            keyCode = event.keyCode
+            isARepeat = event.isARepeat
+            characters = event.charactersIgnoringModifiers ?? ""
+            modifierFlags = event.modifierFlags.rawValue
+        }
+    }
+
+    /// NSEvent monitors are installed on the main thread; stay there without an extra `Task`.
+    nonisolated private func dispatchKeyStroke(
+        _ stroke: KeyStroke,
+        source: String,
+        afterHandle: (@MainActor (Bool) -> Void)? = nil
+    ) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated {
+                self.handleKeyStroke(stroke, source: source)
+                afterHandle?(self.isEditing)
+            }
+        } else {
+            Task { @MainActor in
+                self.handleKeyStroke(stroke, source: source)
+            }
+        }
+    }
+
+    private func handleKeyStroke(_ stroke: KeyStroke, source: String) {
+        if stroke.isARepeat { return }
+
+        let keyCode = stroke.keyCode
 
         if isEditing {
             if isTargetFrontmost {
@@ -501,10 +621,10 @@ public final class InputRuntime: ObservableObject {
               front.bundleIdentifier == targetBundleID else { return }
 
         // Only log key events when target app is frontmost (avoids flooding).
-        let chars = event.charactersIgnoringModifiers ?? ""
-        AppLog.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(chars.debugDescription)")
+        AppLog.log(.inject, "keyDown source=\(source) keyCode=\(keyCode) chars=\(stroke.characters.debugDescription)")
 
-        let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        let mods = NSEvent.ModifierFlags(rawValue: stroke.modifierFlags)
+            .intersection([.command, .option, .control, .shift])
         guard mods.isEmpty else {
             AppLog.log(.inject, "skip: modifier held \(mods.rawValue)")
             return
@@ -523,14 +643,67 @@ public final class InputRuntime: ObservableObject {
         injector.restoreCursorAfterHID = restoreCursorAfterHID
     }
 
-    private func refreshSchemesList() {
-        guard let targetBundleID else {
-            schemes = []
-            return
+    private func persistTargetDisplayName() {
+        guard let targetBundleID, let name = targetAppName, !name.isEmpty else { return }
+        store.setDisplayName(name, bundleID: targetBundleID)
+    }
+
+    private func resolvedAppName(bundleID: String, stored: String?) -> String {
+        if let running = RunningAppCatalog.runningApplication(bundleID: bundleID)?.localizedName,
+           !running.isEmpty {
+            return running
         }
-        let manifest = store.loadManifest(bundleID: targetBundleID)
-        schemes = manifest.schemes
-        activeSchemeID = manifest.activeMeta?.id
+        if let stored, !stored.isEmpty {
+            return stored
+        }
+        if bundleID == targetBundleID, let name = targetAppName, !name.isEmpty {
+            return name
+        }
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            return FileManager.default.displayName(atPath: url.path)
+        }
+        return bundleID
+    }
+
+    private func makeConfiguredTargets() -> [ConfiguredTarget] {
+        store.listAllTargets().map { entry in
+            ConfiguredTarget(
+                bundleID: entry.bundleID,
+                appName: resolvedAppName(bundleID: entry.bundleID, stored: entry.manifest.displayName),
+                schemes: entry.manifest.schemes,
+                activeSchemeID: entry.manifest.activeMeta?.id
+            )
+        }
+        .sorted { $0.appName.localizedCaseInsensitiveCompare($1.appName) == .orderedAscending }
+    }
+
+    private func refreshSchemesList() {
+        reloadCurrentSchemeState()
+    }
+
+    private func refreshConfiguredTargets() {
+        configuredTargets = makeConfiguredTargets()
+    }
+
+    private func reloadCurrentSchemeState() {
+        if let targetBundleID {
+            let manifest = store.loadManifest(bundleID: targetBundleID)
+            schemes = manifest.schemes
+            activeSchemeID = manifest.activeMeta?.id
+        } else {
+            schemes = []
+            activeSchemeID = nil
+        }
+    }
+
+    private func clearTarget() {
+        targetBundleID = nil
+        targetAppName = nil
+        schemes = []
+        activeSchemeID = nil
+        keymap = CanonicalKeymap()
+        persistSettingsNow()
+        AppLog.log(.target, "cleared target")
     }
 
     private func reloadSchemesFromStore() {
@@ -548,6 +721,7 @@ public final class InputRuntime: ObservableObject {
             activeSchemeID = nil
             keymap = CanonicalKeymap(targetHint: targetBundleID, source: .arkeys(version: "1.0.0"))
         }
+        refreshConfiguredTargets()
     }
 
     private func restoreSettings() {
@@ -567,13 +741,35 @@ public final class InputRuntime: ObservableObject {
         if let bundleID = settings.lastTargetBundleID {
             bind(bundleID: bundleID, appName: settings.lastTargetAppName)
         }
+        refreshConfiguredTargets()
     }
 
+    /// Coalesce rapid toggle writes; call `flushSettings()` on quit / window close.
     private func persistSettings() {
+        guard !isRestoringSettings else { return }
+        persistTask?.cancel()
+        persistTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            self?.writeSettings()
+        }
+    }
+
+    private func persistSettingsNow() {
+        persistTask?.cancel()
+        persistTask = nil
+        writeSettings()
+    }
+
+    public func flushSettings() {
+        persistSettingsNow()
+    }
+
+    private func writeSettings() {
         guard !isRestoringSettings else { return }
         let settings = AppSettings(
             lastTargetBundleID: targetBundleID,
-            lastTargetAppName: targetAppName == "(none)" ? nil : targetAppName,
+            lastTargetAppName: targetAppName,
             isEnabled: isEnabled,
             injectModeRaw: injectMode.rawValue,
             preferMouseMovedBeforeHID: preferMouseMovedBeforeHID,

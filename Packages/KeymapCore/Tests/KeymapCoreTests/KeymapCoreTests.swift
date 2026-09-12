@@ -1,6 +1,7 @@
 import XCTest
 @testable import KeymapCore
 
+@MainActor
 final class KeymapCoreTests: XCTestCase {
     func testButtonLookupByKeyCode() {
         var map = CanonicalKeymap()
@@ -10,6 +11,28 @@ final class KeymapCoreTests: XCTestCase {
         )))
         XCTAssertEqual(map.button(matchingKeyCode: 40)?.key.name, "K")
         XCTAssertNil(map.button(matchingKeyCode: 38))
+    }
+
+    func testUnresolvedButtonCount() {
+        var map = CanonicalKeymap()
+        map.elements = [
+            .button(ButtonElement(
+                key: .virtual(0, name: "A"),
+                transform: NormalizedTransform(x: 0.1, y: 0.2, size: 0.05)
+            )),
+            .button(ButtonElement(
+                key: BoundKey(code: .unknown(-1), name: "?"),
+                transform: NormalizedTransform(x: 0.3, y: 0.2, size: 0.05)
+            )),
+            .button(ButtonElement(
+                key: BoundKey(code: .unknown(999), name: "Key999"),
+                transform: NormalizedTransform(x: 0.5, y: 0.2, size: 0.05)
+            )),
+        ]
+        XCTAssertEqual(map.runnableButtons.count, 3)
+        XCTAssertEqual(map.unresolvedButtonCount, 2)
+        XCTAssertFalse(BoundKey.virtual(0, name: "A").isUnresolved)
+        XCTAssertTrue(BoundKey(code: .unknown(-1), name: "?").isUnresolved)
     }
 
     func testStoreRoundTrip() throws {
@@ -59,6 +82,131 @@ final class KeymapCoreTests: XCTestCase {
         try store.delete(schemeID: metaA.id, bundleID: bundleID)
         XCTAssertEqual(store.listSchemes(bundleID: bundleID).count, 1)
         XCTAssertEqual(store.activeSchemeID(bundleID: bundleID), metaB.id)
+    }
+
+    func testListAllTargetsAndCopyScheme() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+
+        var map = CanonicalKeymap(targetHint: "com.game.kr", source: .arkeys(version: "1"))
+        map.elements = [
+            .button(ButtonElement(key: .virtual(0, name: "A"), transform: .init(x: 0.1, y: 0.2, size: 0.05)))
+        ]
+        let source = try store.create(keymap: map, bundleID: "com.game.kr", name: "主方案")
+        store.setDisplayName("Arknights KR", bundleID: "com.game.kr")
+
+        XCTAssertEqual(store.listAllTargets().count, 1)
+        XCTAssertEqual(store.listAllTargets().first?.bundleID, "com.game.kr")
+        XCTAssertEqual(store.listAllTargets().first?.manifest.displayName, "Arknights KR")
+
+        let copied = try store.copyScheme(
+            fromBundleID: "com.game.kr",
+            schemeID: source.id,
+            toBundleID: "com.game.en",
+            name: nil
+        )
+        XCTAssertNotEqual(copied.id, source.id)
+        XCTAssertEqual(copied.name, "主方案")
+        XCTAssertEqual(store.load(bundleID: "com.game.en", schemeID: copied.id)?.runnableButtons.first?.key.name, "A")
+        XCTAssertEqual(store.activeSchemeID(bundleID: "com.game.en"), copied.id)
+        XCTAssertEqual(store.activeSchemeID(bundleID: "com.game.kr"), source.id)
+
+        let targets = store.listAllTargets()
+        XCTAssertEqual(targets.map(\.bundleID), ["com.game.en", "com.game.kr"])
+    }
+
+    func testCopySchemeDoesNotStealExistingActive() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+
+        let dest = try store.create(
+            keymap: CanonicalKeymap(targetHint: "com.game.en", source: .arkeys(version: "1")),
+            bundleID: "com.game.en",
+            name: "English"
+        )
+        let source = try store.create(
+            keymap: CanonicalKeymap(targetHint: "com.game.kr", source: .arkeys(version: "1")),
+            bundleID: "com.game.kr",
+            name: "Korean"
+        )
+
+        let copied = try store.copyScheme(
+            fromBundleID: "com.game.kr",
+            schemeID: source.id,
+            toBundleID: "com.game.en",
+            name: source.name
+        )
+        XCTAssertEqual(store.activeSchemeID(bundleID: "com.game.en"), dest.id)
+        XCTAssertNotEqual(copied.id, dest.id)
+        XCTAssertEqual(store.listSchemes(bundleID: "com.game.en").count, 2)
+    }
+
+    func testSaveWithoutNameUsesUntitledFallback() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+        let schemeID = UUID()
+
+        try store.save(
+            CanonicalKeymap(targetHint: "com.example.app", source: .arkeys(version: "1")),
+            bundleID: "com.example.app",
+            schemeID: schemeID
+        )
+        XCTAssertEqual(store.listSchemes(bundleID: "com.example.app").first?.name, KeymapSchemeMeta.untitledName)
+    }
+
+    func testListAllTargetsSkipsLooseFiles() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data("not a target".utf8).write(to: dir.appendingPathComponent("readme.txt"))
+
+        _ = try store.create(
+            keymap: CanonicalKeymap(targetHint: "com.example.app", source: .arkeys(version: "1")),
+            bundleID: "com.example.app",
+            name: "Main"
+        )
+        XCTAssertEqual(store.listAllTargets().map(\.bundleID), ["com.example.app"])
+    }
+
+    func testDeleteTargetRemovesLibrary() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+        let bundleID = "com.example.gone"
+
+        _ = try store.create(
+            keymap: CanonicalKeymap(targetHint: bundleID, source: .arkeys(version: "1")),
+            bundleID: bundleID,
+            name: "主方案"
+        )
+        XCTAssertEqual(store.listAllTargets().count, 1)
+
+        try store.deleteTarget(bundleID: bundleID)
+        XCTAssertTrue(store.listAllTargets().isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.targetDirectory(forBundleID: bundleID).path))
+        XCTAssertTrue(store.listSchemes(bundleID: bundleID).isEmpty)
+    }
+
+    func testDeleteLastSchemeRemovesTargetDirectory() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = KeymapStore(directory: dir)
+        let bundleID = "com.example.last"
+
+        let meta = try store.create(
+            keymap: CanonicalKeymap(targetHint: bundleID, source: .arkeys(version: "1")),
+            bundleID: bundleID,
+            name: "唯一方案"
+        )
+        try store.delete(schemeID: meta.id, bundleID: bundleID)
+
+        XCTAssertTrue(store.listSchemes(bundleID: bundleID).isEmpty)
+        XCTAssertTrue(store.listAllTargets().isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.targetDirectory(forBundleID: bundleID).path))
     }
 
     func testAppSettingsRoundTrip() throws {

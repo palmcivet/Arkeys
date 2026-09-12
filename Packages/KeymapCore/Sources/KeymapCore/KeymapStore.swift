@@ -2,6 +2,9 @@ import Foundation
 
 /// Metadata for one saved keymap scheme under a target app.
 public struct KeymapSchemeMeta: Codable, Hashable, Identifiable, Sendable {
+    /// Package-level fallback when a caller does not supply a name.
+    public static let untitledName = "Untitled"
+
     public var id: UUID
     public var name: String
     public var updatedAt: Date
@@ -17,10 +20,21 @@ public struct KeymapSchemeMeta: Codable, Hashable, Identifiable, Sendable {
 public struct TargetKeymapManifest: Codable, Hashable, Sendable {
     public var schemes: [KeymapSchemeMeta]
     public var activeSchemeID: UUID?
+    /// Original bundle id (directory names sanitize `/` to `_`).
+    public var bundleID: String?
+    /// Cached display name so menus work when the app is not running.
+    public var displayName: String?
 
-    public init(schemes: [KeymapSchemeMeta] = [], activeSchemeID: UUID? = nil) {
+    public init(
+        schemes: [KeymapSchemeMeta] = [],
+        activeSchemeID: UUID? = nil,
+        bundleID: String? = nil,
+        displayName: String? = nil
+    ) {
         self.schemes = schemes
         self.activeSchemeID = activeSchemeID
+        self.bundleID = bundleID
+        self.displayName = displayName
     }
 
     public var activeMeta: KeymapSchemeMeta? {
@@ -29,8 +43,21 @@ public struct TargetKeymapManifest: Codable, Hashable, Sendable {
     }
 }
 
+/// One configured target discovered under the Keymaps directory.
+public struct TargetEntry: Hashable, Sendable {
+    public let bundleID: String
+    public let manifest: TargetKeymapManifest
+
+    public init(bundleID: String, manifest: TargetKeymapManifest) {
+        self.bundleID = bundleID
+        self.manifest = manifest
+    }
+}
+
 /// Persist CanonicalKeymap schemes under Application Support (multi-scheme per target).
-public final class KeymapStore: @unchecked Sendable {
+/// File I/O is synchronous and isolated to the main actor — the same isolation as `InputRuntime`.
+@MainActor
+public final class KeymapStore {
     public let directory: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -83,8 +110,49 @@ public final class KeymapStore: @unchecked Sendable {
 
     public func saveManifest(_ manifest: TargetKeymapManifest, bundleID: String) throws {
         try ensureTargetDirectory(bundleID: bundleID)
+        var manifest = manifest
+        manifest.bundleID = bundleID
         let data = try encoder.encode(manifest)
         try data.write(to: manifestURL(forBundleID: bundleID), options: .atomic)
+    }
+
+    /// Scan Keymaps/ for every target that has at least one saved scheme.
+    public func listAllTargets() -> [TargetEntry] {
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        return contents.compactMap { url -> TargetEntry? in
+            let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory
+            if let isDirectory {
+                guard isDirectory else { return nil }
+            } else {
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
+                    return nil
+                }
+            }
+            let folderName = url.lastPathComponent
+            let manifest = loadManifest(bundleID: folderName)
+            guard !manifest.schemes.isEmpty else { return nil }
+            return TargetEntry(bundleID: manifest.bundleID ?? folderName, manifest: manifest)
+        }
+        .sorted { $0.bundleID.localizedCaseInsensitiveCompare($1.bundleID) == .orderedAscending }
+    }
+
+    public func setDisplayName(_ name: String, bundleID: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard FileManager.default.fileExists(atPath: manifestURL(forBundleID: bundleID).path) else { return }
+        var manifest = loadManifest(bundleID: bundleID)
+        guard manifest.displayName != trimmed else { return }
+        manifest.displayName = trimmed
+        try? saveManifest(manifest, bundleID: bundleID)
     }
 
     public func listSchemes(bundleID: String) -> [KeymapSchemeMeta] {
@@ -129,7 +197,7 @@ public final class KeymapStore: @unchecked Sendable {
                 manifest.schemes[idx].name = name
             }
         } else {
-            let meta = KeymapSchemeMeta(id: schemeID, name: name ?? "未命名方案")
+            let meta = KeymapSchemeMeta(id: schemeID, name: name ?? KeymapSchemeMeta.untitledName)
             manifest.schemes.append(meta)
             if manifest.activeSchemeID == nil {
                 manifest.activeSchemeID = schemeID
@@ -177,10 +245,46 @@ public final class KeymapStore: @unchecked Sendable {
         }
         manifest.schemes.removeAll { $0.id == schemeID }
         try? FileManager.default.removeItem(at: schemeURL(bundleID: bundleID, schemeID: schemeID))
+        if manifest.schemes.isEmpty {
+            try deleteTarget(bundleID: bundleID)
+            return
+        }
         if manifest.activeSchemeID == schemeID {
             manifest.activeSchemeID = manifest.schemes.first?.id
         }
         try saveManifest(manifest, bundleID: bundleID)
+    }
+
+    /// Remove every scheme and the target directory.
+    public func deleteTarget(bundleID: String) throws {
+        let url = targetDirectory(forBundleID: bundleID)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// Copy a scheme into another target (new UUID).
+    /// If the destination has no active scheme yet (including a brand-new library),
+    /// `save` makes this copy active. An existing destination selection is left alone.
+    @discardableResult
+    public func copyScheme(
+        fromBundleID: String,
+        schemeID: UUID,
+        toBundleID: String,
+        name: String? = nil
+    ) throws -> KeymapSchemeMeta {
+        guard let keymap = load(bundleID: fromBundleID, schemeID: schemeID) else {
+            throw KeymapStoreError.schemeNotFound(schemeID)
+        }
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = (trimmed?.isEmpty == false ? trimmed : nil)
+            ?? loadManifest(bundleID: fromBundleID).schemes.first { $0.id == schemeID }?.name
+            ?? KeymapSchemeMeta.untitledName
+        var copy = keymap
+        copy.targetHint = toBundleID
+        let meta = KeymapSchemeMeta(name: resolvedName)
+        try save(copy, bundleID: toBundleID, schemeID: meta.id, name: resolvedName)
+        return meta
     }
 
     // MARK: - Private

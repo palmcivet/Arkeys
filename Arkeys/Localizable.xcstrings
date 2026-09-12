@@ -43,13 +43,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用" } }
       }
     },
-    "menu.scheme" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scheme" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前方案" } }
-      }
-    },
     "menu.settings" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -169,13 +162,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在「系统设置 → 语言与地区 → 应用」中添加，然后重新打开。" } }
       }
     },
-    "keymap.current" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current Scheme" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前方案" } }
-      }
-    },
     "keymap.needTarget" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -200,8 +186,8 @@
     "keymap.edit" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit Keymap" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑键映射" } }
       }
     },
     "keymap.import" : {
@@ -230,97 +216,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled Scheme" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未命名方案" } }
-      }
-    },
-    "keymap.summary %lld %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld buttons · Source: %@" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 个按键 · 来源：%@" } }
-      }
-    },
-    "keymap.source.playCover" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "PlayCover" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "PlayCover" } }
-      }
-    },
-    "keymap.source.arkeys" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Arkeys" } }
-      }
-    },
-    "keymap.source.unknown" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未知" } }
-      }
-    },
-    "keymap.created %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Created: %@" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已新建：%@" } }
-      }
-    },
-    "keymap.imported %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Imported: %@" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已导入：%@" } }
-      }
-    },
-    "keymap.deleted %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deleted: %@" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已删除：%@" } }
-      }
-    },
-    "keymap.saved" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scheme saved" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "方案已保存" } }
-      }
-    },
-    "keymap.discard.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard keymap changes?" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃未保存的更改？" } }
-      }
-    },
-    "keymap.discard.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "You have unsaved edits. Discarding will lose them." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前有未保存的编辑，放弃后将无法恢复。" } }
-      }
-    },
-    "keymap.discard.confirm" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃" } }
-      }
-    },
-    "keymap.discard.keepEditing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep Editing" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续编辑" } }
-      }
-    },
-    "keymap.needTarget.action" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a target app first" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请先选择目标应用" } }
       }
     },
     "keymap.showOverlay" : {
@@ -400,13 +295,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚未测试" } }
       }
     },
-    "compat.system" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "System" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "系统信息" } }
-      }
-    },
     "compat.system.os" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -426,13 +314,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Off" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关" } }
-      }
-    },
-    "compat.permissions" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "权限信息" } }
       }
     },
     "compat.permissions.ax" : {
@@ -463,13 +344,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "授予权限" } }
       }
     },
-    "compat.api" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "API" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "API 信息" } }
-      }
-    },
     "compat.api.skylight" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -496,13 +370,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不可用" } }
-      }
-    },
-    "compat.advanced" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Advanced" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "高级" } }
       }
     },
     "compat.advanced.mouseMoved" : {
@@ -610,18 +477,137 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "绑定所选" } }
       }
     },
-    "yes" : {
+    "keymap.apps.add" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Yes" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "是" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add App" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加应用" } }
       }
     },
-    "no" : {
+    "keymap.apps.count %lld" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "否" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld schemes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 个方案" } }
+      }
+    },
+    "keymap.apps.delete.message %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This removes %lld saved schemes from this Mac. You can’t undo this." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将从本机删除 %lld 个已保存的方案，此操作无法撤销。" } }
+      }
+    },
+    "keymap.apps.delete.title %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Keymaps for “%@”?" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要删除“%@”的键位吗？" } }
+      }
+    },
+    "keymap.apps.header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Apps" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "应用" } }
+      }
+    },
+    "keymap.apps.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All apps with saved keymaps on this Mac. Select one to manage its schemes. Shortcuts only fire when that app is frontmost." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "本机已保存的键位库。选择一个应用以管理其方案。仅当前台是该应用时，键位才会生效。" } }
+      }
+    },
+    "keymap.apps.remove" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove App" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除应用" } }
+      }
+    },
+    "keymap.copyTo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy to…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "复制到…" } }
+      }
+    },
+    "keymap.copyTo.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Scheme" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "复制方案" } }
+      }
+    },
+    "keymap.copyTo.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not copy the scheme" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法复制方案" } }
+      }
+    },
+    "keymap.copyTo.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Scheme to App" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "复制方案到应用" } }
+      }
+    },
+    "keymap.more" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "More" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更多" } }
+      }
+    },
+    "keymap.rename" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rename" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重命名" } }
+      }
+    },
+    "keymap.schemes.delete.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This removes the saved scheme from this Mac. You can’t undo this." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将从本机删除该已保存的方案，此操作无法撤销。" } }
+      }
+    },
+    "keymap.schemes.delete.title %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Scheme “%@”?" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要删除方案“%@”吗？" } }
+      }
+    },
+    "keymap.schemes.header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Schemes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "方案" } }
+      }
+    },
+    "keymap.selection.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Schemes for the selected app. Click to switch; double-click to rename." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "所选应用的方案。单击切换，双击重命名。" } }
+      }
+    },
+    "keymap.summary %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld buttons" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 个按键" } }
+      }
+    },
+    "keymap.summary.invalid %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld buttons · %lld unbound (?)" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 个按键 · %lld 个无效 (?)" } }
       }
     }
   },

@@ -16,6 +16,9 @@ public struct SelectableApp: Identifiable, Hashable, Sendable {
 }
 
 public enum RunningAppCatalog {
+    private static let iconCacheLock = NSLock()
+    private static var iconCache: [String: NSImage] = [:]
+
     /// Regular user apps with a bundle id, excluding Arkeys and background agents.
     public static func selectableApps(excludingBundleID selfBundleID: String? = Bundle.main.bundleIdentifier) -> [SelectableApp] {
         let apps = NSWorkspace.shared.runningApplications
@@ -44,9 +47,35 @@ public enum RunningAppCatalog {
         NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first
     }
 
+    /// Resolved icons are cached; misses are not, so a later install can appear.
     public static func icon(forBundleID bundleID: String) -> NSImage? {
-        guard let app = runningApplication(bundleID: bundleID),
-              let url = app.bundleURL else { return nil }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        iconCacheLock.lock()
+        let cached = iconCache[bundleID]
+        iconCacheLock.unlock()
+        if let cached {
+            return cached
+        }
+
+        let resolved: NSImage?
+        if let app = runningApplication(bundleID: bundleID), let url = app.bundleURL {
+            resolved = NSWorkspace.shared.icon(forFile: url.path)
+        } else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            resolved = NSWorkspace.shared.icon(forFile: url.path)
+        } else {
+            resolved = nil
+        }
+
+        if let resolved {
+            iconCacheLock.lock()
+            iconCache[bundleID] = resolved
+            iconCacheLock.unlock()
+        }
+        return resolved
+    }
+
+    public static func invalidateCachedIcon(forBundleID bundleID: String) {
+        iconCacheLock.lock()
+        iconCache.removeValue(forKey: bundleID)
+        iconCacheLock.unlock()
     }
 }

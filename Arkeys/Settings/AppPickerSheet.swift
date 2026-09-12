@@ -2,14 +2,20 @@ import SwiftUI
 import Targeting
 
 struct AppPickerSheet: View {
+    var titleKey: LocalizedStringKey = "picker.title"
+    var confirmKey: LocalizedStringKey = "picker.bind"
     let apps: [SelectableApp]
     let currentBundleID: String?
     @ObservedObject var highlight: TargetHighlightController
     let onSelect: (SelectableApp) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var selected: SelectableApp?
+    @State private var selectedID: String?
     @State private var query = ""
+
+    private var selected: SelectableApp? {
+        filtered.first { $0.id == selectedID }
+    }
 
     private var filtered: [SelectableApp] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -22,7 +28,7 @@ struct AppPickerSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("picker.title")
+            Text(titleKey)
                 .font(.title3.weight(.semibold))
             Text("picker.footer")
                 .font(.caption)
@@ -31,15 +37,7 @@ struct AppPickerSheet: View {
             TextField("picker.search", text: $query)
                 .textFieldStyle(.roundedBorder)
 
-            List(filtered, selection: Binding(
-                get: { selected?.id },
-                set: { newID in
-                    selected = filtered.first { $0.id == newID }
-                    if let selected {
-                        highlight.show(bundleID: selected.bundleIdentifier)
-                    }
-                }
-            )) { app in
+            List(filtered, id: \.id, selection: $selectedID) { app in
                 HStack(spacing: 10) {
                     if let icon = RunningAppCatalog.icon(forBundleID: app.bundleIdentifier) {
                         Image(nsImage: icon)
@@ -68,10 +66,10 @@ struct AppPickerSheet: View {
                     }
                 }
                 .tag(app.id)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    selected = app
-                    highlight.show(bundleID: app.bundleIdentifier)
+            }
+            .onChange(of: selectedID) { _, newID in
+                if let newID {
+                    highlight.show(bundleID: newID)
                 }
             }
             .frame(minHeight: 280)
@@ -88,7 +86,7 @@ struct AppPickerSheet: View {
                     dismiss()
                 }
                 Spacer()
-                Button("picker.bind") {
+                Button(confirmKey) {
                     if let selected {
                         onSelect(selected)
                     }

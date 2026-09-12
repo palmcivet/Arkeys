@@ -26,6 +26,16 @@ public struct BoundKey: Codable, Hashable, Sendable {
     public static func virtual(_ keyCode: UInt16, name: String) -> BoundKey {
         BoundKey(code: .virtual(keyCode), name: name)
     }
+
+    /// Placeholder `?` or an unmapped code that cannot receive a key event.
+    public var isUnresolved: Bool {
+        switch code {
+        case .unknown:
+            return true
+        case .virtual, .leftMouse, .rightMouse, .middleMouse:
+            return name.trimmingCharacters(in: .whitespacesAndNewlines) == "?"
+        }
+    }
 }
 
 /// Relative placement inside the target window (origin: top-left).
@@ -202,6 +212,10 @@ public struct CanonicalKeymap: Codable, Hashable, Sendable {
 
     public var runnableButtons: [ButtonElement] {
         elements.compactMap(\.buttonElement)
+    }
+
+    public var unresolvedButtonCount: Int {
+        runnableButtons.count { $0.key.isUnresolved }
     }
 
     public func button(matchingKeyCode keyCode: UInt16) -> ButtonElement? {

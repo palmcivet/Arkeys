@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: NSWindow?
     private var overlayWindow: NSWindow?
     private var isSettingsVisible = false
+    private var restoreSettingsAfterEditing = false
     private var cancellables = Set<AnyCancellable>()
 
     private static let settingsWidth: CGFloat = SettingsTabViewController.contentWidth
@@ -29,6 +30,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         self.runtime = runtime
 
         editorSession.attach(runtime: runtime)
+        editorSession.onWillStart = { [weak self] in
+            self?.hideSettingsForEditing()
+        }
+        editorSession.onEnded = { [weak self] in
+            self?.restoreSettingsAfterEditorIfNeeded()
+        }
         editorSession.controller.shouldHideForHostUI = { [weak self] in
             self?.isSettingsVisible == true
         }
@@ -99,6 +106,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
+    private func hideSettingsForEditing() {
+        restoreSettingsAfterEditing = isSettingsVisible
+        guard isSettingsVisible else { return }
+        settingsWindow?.orderOut(nil)
+        isSettingsVisible = false
+        refreshActivationPolicy()
+    }
+
+    private func restoreSettingsAfterEditorIfNeeded() {
+        guard restoreSettingsAfterEditing else { return }
+        restoreSettingsAfterEditing = false
+        DispatchQueue.main.async { [weak self] in
+            self?.openSettings()
+        }
+    }
+
     private func bindKeymapHUD(_ runtime: InputRuntime) {
         runtime.$keymap
             .combineLatest(runtime.$keymapButtonShape)
@@ -120,6 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        runtime?.flushSettings()
         if editorSession.controller.isActive {
             editorSession.cancel()
         }
@@ -137,6 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         guard notification.object as? NSWindow === settingsWindow else { return }
+        runtime?.flushSettings()
         isSettingsVisible = false
         // Re-assert Dock after AppKit finishes closing the last window.
         // LSUIElement apps can otherwise drop the Dock icon and leave no UI.

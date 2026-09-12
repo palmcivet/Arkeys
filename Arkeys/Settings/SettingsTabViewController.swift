@@ -22,7 +22,7 @@ final class SettingsTabViewController: NSTabViewController {
         var contentHeight: CGFloat {
             switch self {
             case .general: return 420
-            case .keymap: return 360
+            case .keymap: return 520
             case .compatibility: return 620
             case .about: return 140
             }
@@ -65,14 +65,14 @@ final class SettingsTabViewController: NSTabViewController {
         transitionOptions = [.crossfade]
 
         for pane in Pane.allCases {
-            let hosting = makeHostingController(for: pane)
-            hosting.view.frame = NSRect(
+            let controller = makeViewController(for: pane)
+            controller.view.frame = NSRect(
                 x: 0,
                 y: 0,
                 width: Self.contentWidth,
                 height: pane.contentHeight
             )
-            let item = NSTabViewItem(viewController: hosting)
+            let item = NSTabViewItem(viewController: controller)
             item.label = pane.label
             item.image = NSImage(systemSymbolName: pane.systemImage, accessibilityDescription: pane.label)
             addTabViewItem(item)
@@ -86,14 +86,19 @@ final class SettingsTabViewController: NSTabViewController {
 
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
-        resizeWindow(for: selectedPane, animated: true)
+        let pane = selectedPane
+        // Wait until NSTabView finishes the toolbar transition. Resizing in-line
+        // fights `NSHostingController` ideal-size and can abort the layout pass.
+        DispatchQueue.main.async { [weak self] in
+            self?.resizeWindow(for: pane, animated: true)
+        }
     }
 
     private var selectedPane: Pane {
         Pane(rawValue: selectedTabViewItemIndex) ?? .general
     }
 
-    private func makeHostingController(for pane: Pane) -> NSHostingController<AnyView> {
+    private func makeViewController(for pane: Pane) -> NSViewController {
         let root: AnyView
         switch pane {
         case .general:
@@ -105,7 +110,12 @@ final class SettingsTabViewController: NSTabViewController {
         case .about:
             root = AnyView(AboutSettingsView())
         }
-        return NSHostingController(rootView: root)
+        let controller = NSHostingController(rootView: root)
+        // Preference panes use a fixed window height. If the host publishes an
+        // ideal size, AppKit fights the tab-switch resize and can crash.
+        controller.sizingOptions = []
+        controller.preferredContentSize = NSSize(width: Self.contentWidth, height: pane.contentHeight)
+        return controller
     }
 
     /// Animate content height; preference toolbar icons remain fixed in the titlebar.

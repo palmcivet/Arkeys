@@ -15,8 +15,8 @@ final class EditorSession {
         self.runtime = runtime
         cancellables.removeAll()
         controller.chromeCopy = EditorChromeCopy(
-            cancel: String(localized: "menu.editor.cancel"),
-            done: String(localized: "menu.editor.done")
+            cancel: String(localized: "common.cancel"),
+            done: String(localized: "editor.done")
         )
         runtime.$keymapButtonShape
             .sink { [weak self] shape in

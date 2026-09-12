@@ -9,6 +9,7 @@ xcuserdata/
 .build/
 .swiftpm
 DerivedData/
+.derivedData/
 build/
 dist/
 *.ipa

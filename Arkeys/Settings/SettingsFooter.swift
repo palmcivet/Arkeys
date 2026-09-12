@@ -30,3 +30,17 @@ extension Text {
         multilineTextAlignment(.leading)
     }
 }
+
+func localizedResource(
+    _ key: StaticString,
+    default value: String.LocalizationValue
+) -> LocalizedStringResource {
+    LocalizedStringResource(key, defaultValue: value)
+}
+
+func localized(
+    _ key: StaticString,
+    default value: String.LocalizationValue
+) -> String {
+    String(localized: localizedResource(key, default: value))
+}

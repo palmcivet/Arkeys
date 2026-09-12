@@ -16,14 +16,14 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Picker("keymap.buttonShape", selection: $runtime.keymapButtonShape) {
-                    Text("keymap.buttonShape.circle").tag(KeymapButtonShape.circle)
-                    Text("keymap.buttonShape.rectangle").tag(KeymapButtonShape.rectangle)
+                Picker("general.shortcutShape", selection: $runtime.keymapButtonShape) {
+                    Text("general.shortcutShape.circle").tag(KeymapButtonShape.circle)
+                    Text("general.shortcutShape.rectangle").tag(KeymapButtonShape.rectangle)
                 }
                 .pickerStyle(.segmented)
-                Toggle("keymap.showOverlay", isOn: $runtime.showKeymapOverlay)
+                Toggle("general.showShortcuts", isOn: $runtime.showKeymapOverlay)
             } footer: {
-                SettingsFooter("keymap.showOverlay.footer")
+                SettingsFooter("general.showShortcuts.footer")
             }
 
             Section {

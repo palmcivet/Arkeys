@@ -95,7 +95,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(toggle)
 
         let overlay = NSMenuItem(
-            title: String(localized: "menu.showOverlay"),
+            title: String(localized: "menu.showShortcuts"),
             action: #selector(toggleShowOverlay),
             keyEquivalent: ""
         )
@@ -162,7 +162,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             menu.addItem(NSMenuItem.separator())
 
             let done = NSMenuItem(
-                title: String(localized: "menu.editor.done"),
+                title: String(localized: "editor.done"),
                 action: #selector(finishEditing),
                 keyEquivalent: ""
             )
@@ -170,7 +170,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             menu.addItem(done)
 
             let cancel = NSMenuItem(
-                title: String(localized: "menu.editor.cancel"),
+                title: String(localized: "common.cancel"),
                 action: #selector(cancelEditing),
                 keyEquivalent: ""
             )

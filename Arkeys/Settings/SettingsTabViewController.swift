@@ -21,19 +21,19 @@ final class SettingsTabViewController: NSTabViewController {
         /// Sized so each pane fits without scrolling — Apple preference-window guidance.
         var contentHeight: CGFloat {
             switch self {
-            case .general: return 420
-            case .keymap: return 520
-            case .compatibility: return 620
+            case .general: return 440
+            case .keymap: return 530
+            case .compatibility: return 630
             case .about: return 140
             }
         }
 
         var label: String {
             switch self {
-            case .general: String(localized: "tab.general")
-            case .keymap: String(localized: "tab.keymap")
-            case .compatibility: String(localized: "tab.compatibility")
-            case .about: String(localized: "tab.about")
+            case .general: String(localized: "settings.tab.general")
+            case .keymap: String(localized: "settings.tab.keymap")
+            case .compatibility: String(localized: "settings.tab.compatibility")
+            case .about: String(localized: "settings.tab.about")
             }
         }
 

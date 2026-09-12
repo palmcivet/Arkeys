@@ -36,36 +36,36 @@ struct CompatibilitySettingsView: View {
             }
 
             Section {
-                Toggle("compat.advanced.mouseMoved", isOn: $runtime.preferMouseMovedBeforeHID)
-                Toggle("compat.advanced.warp", isOn: $runtime.restoreCursorAfterHID)
+                Toggle("compat.hid.mouseMoved", isOn: $runtime.preferMouseMovedBeforeHID)
+                Toggle("compat.hid.restoreCursor", isOn: $runtime.restoreCursorAfterHID)
             } footer: {
                 SettingsFooter("compat.hid.footer")
             }
             .disabled(runtime.injectMode != .hidTap && runtime.injectMode != .cascade)
 
             Section {
-                LabeledContent("compat.permissions.ax") {
+                LabeledContent("compat.status.accessibility") {
                     statusText(runtime.capability?.accessibilityTrusted)
                 }
-                LabeledContent("compat.permissions.tap") {
+                LabeledContent("compat.status.eventTap") {
                     statusText(runtime.capability?.eventTapCreatable)
                 }
-                LabeledContent("compat.api.skylight") {
+                LabeledContent("compat.status.skyLight") {
                     availabilityText(runtime.capability?.skyLightPostToPid)
                 }
-                LabeledContent("compat.api.authMessage") {
+                LabeledContent("compat.status.authMessage") {
                     availabilityText(runtime.capability?.authMessage)
                 }
-                LabeledContent("compat.system.os") {
+                LabeledContent("compat.status.macos") {
                     Text(runtime.capability?.osVersion ?? "—")
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Button("compat.permissions.grantPermission") {
+                    Button("compat.status.grantPermission") {
                         runtime.openAccessibilitySettings()
                     }
                     .disabled(runtime.capability?.accessibilityTrusted == true)
-                    Button("compat.permissions.refresh") {
+                    Button("compat.status.refresh") {
                         runtime.refreshCapability()
                     }
                 }
@@ -109,10 +109,10 @@ struct CompatibilitySettingsView: View {
 
     private func localizedName(for mode: InjectMode) -> String {
         switch mode {
-        case .cascade: return String(localized: "inject.mode.cascade")
-        case .postToPid: return String(localized: "inject.mode.postToPid")
-        case .skyLight: return String(localized: "inject.mode.skyLight")
-        case .hidTap: return String(localized: "inject.mode.hidTap")
+        case .cascade: return String(localized: "compat.route.automatic")
+        case .postToPid: return String(localized: "compat.route.postToProcess")
+        case .skyLight: return String(localized: "compat.route.skyLight")
+        case .hidTap: return String(localized: "compat.route.globalHID")
         }
     }
 
@@ -130,7 +130,9 @@ struct CompatibilitySettingsView: View {
 
     private func boolLabel(_ value: Bool?) -> String {
         guard let value else { return "—" }
-        return String(localized: String.LocalizationValue(value ? "compat.on" : "compat.off"))
+        return value
+            ? String(localized: "compat.status.on")
+            : String(localized: "compat.status.off")
     }
 
     private func statusText(_ value: Bool?) -> some View {
@@ -141,11 +143,13 @@ struct CompatibilitySettingsView: View {
     private func availabilityText(_ value: Bool?) -> some View {
         let text: String
         if let value {
-            text = String(localized: String.LocalizationValue(value ? "compat.available" : "compat.unavailable"))
+            text = value
+                ? String(localized: "compat.status.available")
+                : String(localized: "compat.status.unavailable")
         } else {
             text = "—"
         }
         return Text(text)
-            .foregroundStyle(value == true ? .green : (value == false ? .secondary : .secondary))
+            .foregroundStyle(value == true ? .green : .secondary)
     }
 }

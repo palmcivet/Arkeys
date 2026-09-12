@@ -131,7 +131,10 @@ final class KeymapAppTableCoordinator: NSObject, NSTableViewDataSource, NSTableV
             cell.textField?.stringValue = target.appName
             cell.textField?.toolTip = target.bundleID
             if let countField = cell.viewWithTag(Self.countLabelTag) as? NSTextField {
-                countField.stringValue = String(localized: "keymap.apps.count \(target.schemes.count)")
+                countField.stringValue = localized(
+                    "keymap.apps.count",
+                    default: "\(target.schemes.count) schemes"
+                )
             }
             return cell
         }

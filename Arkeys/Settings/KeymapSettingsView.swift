@@ -47,18 +47,16 @@ struct KeymapSettingsView: View {
                 presentedAlert = .error(error.localizedDescription)
             }
         }
-        .sheet(isPresented: $isPickingApp, onDismiss: hideHighlight) {
-            appPicker(titleKey: "picker.title", confirmKey: "picker.bind") { app in
+        .sheet(isPresented: $isPickingApp) {
+            appPicker(titleKey: "picker.title", confirmKey: "picker.bindSelected") { app in
                 runtime.bind(bundleID: app.bundleIdentifier, appName: app.name)
                 isPickingApp = false
-                highlight.hide()
             }
         }
-        .sheet(isPresented: $isCopyingToApp, onDismiss: hideHighlight) {
-            appPicker(titleKey: "keymap.copyTo.title", confirmKey: "keymap.copyTo.confirm") { app in
+        .sheet(isPresented: $isCopyingToApp) {
+            appPicker(titleKey: "keymap.schemes.copyTo.title", confirmKey: "keymap.schemes.copyTo.confirm") { app in
                 copyActiveScheme(to: app)
                 isCopyingToApp = false
-                highlight.hide()
             }
         }
         .alert(
@@ -70,11 +68,11 @@ struct KeymapSettingsView: View {
             presenting: presentedAlert
         ) { alert in
             if case .delete = alert {
-                Button("keymap.delete", role: .destructive) {
+                Button("common.delete", role: .destructive) {
                     confirmPendingDelete()
                 }
             }
-            Button("picker.cancel", role: .cancel) {
+            Button("common.cancel", role: .cancel) {
                 presentedAlert = nil
             }
         } message: { alert in
@@ -149,92 +147,99 @@ struct KeymapSettingsView: View {
         }
     }
 
+    private var hasSelectedApp: Bool {
+        runtime.targetBundleID != nil
+    }
+
     private var schemesSection: some View {
         Section {
-            if runtime.targetBundleID == nil {
-                Text("keymap.needTarget")
-                    .foregroundStyle(.secondary)
-                    .settingsMultilineLeading()
-            } else {
-                if runtime.schemes.isEmpty {
-                    Text("keymap.empty")
-                        .foregroundStyle(.secondary)
-                        .settingsMultilineLeading()
-                } else {
-                    HStack(spacing: 8) {
-                        Text(schemeSummaryText)
-                            .foregroundStyle(runtime.keymap.unresolvedButtonCount > 0 ? Color.orange : .secondary)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Button("keymap.edit") {
-                            beginEdit()
-                        }
-                        .disabled(runtime.isEditing)
-                        .fixedSize()
+            schemeStatusRow
 
-                        Menu {
-                            Button("keymap.rename") { renameRequest += 1 }
-                                .disabled(runtime.activeSchemeID == nil)
-                            Button("keymap.export") { prepareExport() }
-                                .disabled(runtime.activeSchemeID == nil)
-                            Button("keymap.copyTo") { isCopyingToApp = true }
-                                .disabled(runtime.activeSchemeID == nil)
-                        } label: {
-                            Text("keymap.more")
-                        }
-                        .menuStyle(.button)
-                        .disabled(runtime.isEditing)
-                        .fixedSize()
-                    }
-                }
+            KeymapSchemeTable(
+                schemes: runtime.schemes,
+                selectedID: runtime.activeSchemeID,
+                isEnabled: hasSelectedApp && !runtime.isEditing,
+                renameRequest: renameRequest,
+                onSelect: { runtime.selectScheme(id: $0) },
+                onRename: runtime.renameScheme
+            )
+            .frame(height: KeymapTableMetrics.height(visibleRows: Self.schemeVisibleRows))
 
-                KeymapSchemeTable(
-                    schemes: runtime.schemes,
-                    selectedID: runtime.activeSchemeID,
-                    isEnabled: !runtime.isEditing,
-                    renameRequest: renameRequest,
-                    onSelect: { runtime.selectScheme(id: $0) },
-                    onRename: runtime.renameScheme
-                )
-                .frame(height: KeymapTableMetrics.height(visibleRows: Self.schemeVisibleRows))
-
+            HStack(spacing: 8) {
                 HStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button {
-                            createNewScheme()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .help("keymap.new")
-                        .accessibilityLabel("keymap.new")
-                        .disabled(runtime.isEditing)
-
-                        Button {
-                            requestDeleteActiveScheme()
-                        } label: {
-                            Image(systemName: "minus")
-                        }
-                        .help("keymap.delete")
-                        .accessibilityLabel("keymap.delete")
-                        .disabled(runtime.activeSchemeID == nil || runtime.isEditing)
+                    Button {
+                        createNewScheme()
+                    } label: {
+                        Image(systemName: "plus")
                     }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
+                    .help("keymap.schemes.new")
+                    .accessibilityLabel("keymap.schemes.new")
+                    .disabled(!hasSelectedApp || runtime.isEditing)
 
-                    Spacer(minLength: 8)
-                        .layoutPriority(1)
-
-                    Button("keymap.import") {
-                        isImporting = true
+                    Button {
+                        requestDeleteActiveScheme()
+                    } label: {
+                        Image(systemName: "minus")
                     }
-                    .disabled(runtime.isEditing)
-                    .fixedSize()
+                    .help("common.delete")
+                    .accessibilityLabel("common.delete")
+                    .disabled(!hasSelectedApp || runtime.activeSchemeID == nil || runtime.isEditing)
                 }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+
+                Spacer(minLength: 8)
+                    .layoutPriority(1)
+
+                Button("keymap.schemes.import") {
+                    isImporting = true
+                }
+                .disabled(!hasSelectedApp || runtime.isEditing)
+                .fixedSize()
             }
         } header: {
             Text("keymap.schemes.header")
         } footer: {
-            SettingsFooter("keymap.selection.footer")
+            SettingsFooter("keymap.schemes.footer")
+        }
+    }
+
+    @ViewBuilder
+    private var schemeStatusRow: some View {
+        if !hasSelectedApp {
+            Text("keymap.schemes.needTargetApp")
+                .foregroundStyle(.secondary)
+                .settingsMultilineLeading()
+        } else if runtime.schemes.isEmpty {
+            Text("keymap.schemes.empty")
+                .foregroundStyle(.secondary)
+                .settingsMultilineLeading()
+        } else {
+            HStack(spacing: 8) {
+                Text(schemeSummaryText)
+                    .foregroundStyle(runtime.keymap.unresolvedButtonCount > 0 ? Color.orange : .secondary)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Button("keymap.schemes.edit") {
+                    beginEdit()
+                }
+                .disabled(runtime.isEditing)
+                .fixedSize()
+
+                Menu {
+                    Button("keymap.schemes.rename") { renameRequest += 1 }
+                        .disabled(runtime.activeSchemeID == nil)
+                    Button("keymap.schemes.export") { prepareExport() }
+                        .disabled(runtime.activeSchemeID == nil)
+                    Button("keymap.schemes.copyTo") { isCopyingToApp = true }
+                        .disabled(runtime.activeSchemeID == nil)
+                } label: {
+                    Text("keymap.schemes.more")
+                }
+                .menuStyle(.button)
+                .disabled(runtime.isEditing)
+                .fixedSize()
+            }
         }
     }
 
@@ -242,23 +247,35 @@ struct KeymapSettingsView: View {
         let count = runtime.keymap.runnableButtons.count
         let unresolved = runtime.keymap.unresolvedButtonCount
         if unresolved > 0 {
-            return String(localized: "keymap.summary.invalid \(count) \(unresolved)")
+            return localized(
+                "keymap.schemes.summary.unbound",
+                default: "\(count) keys · \(unresolved) unbound (?)"
+            )
         }
-        return String(localized: "keymap.summary \(count)")
+        return localized(
+            "keymap.schemes.summary",
+            default: "\(count) keys"
+        )
     }
 
     private var exportDefaultName: String {
         let name = runtime.schemes.first(where: { $0.id == runtime.activeSchemeID })?.name
-            ?? String(localized: "keymap.untitled")
+            ?? String(localized: "keymap.schemes.untitled")
         return name
     }
 
     private var alertTitle: String {
         switch presentedAlert {
         case .delete(.app(let app)):
-            String(localized: "keymap.apps.delete.title \(app.appName)")
+            localized(
+                "keymap.apps.delete.title",
+                default: "Delete All Schemes for “\(app.appName)”?"
+            )
         case .delete(.scheme(let scheme)):
-            String(localized: "keymap.schemes.delete.title \(scheme.name)")
+            localized(
+                "keymap.schemes.delete.title",
+                default: "Delete Scheme “\(scheme.name)”?"
+            )
         case .error(let message):
             message
         case nil:
@@ -269,16 +286,15 @@ struct KeymapSettingsView: View {
     private func alertMessage(for alert: PresentedAlert) -> String? {
         switch alert {
         case .delete(.app(let app)):
-            String(localized: "keymap.apps.delete.message \(app.schemes.count)")
+            localized(
+                "keymap.apps.delete.message",
+                default: "This will delete \(app.schemes.count) saved schemes. You can’t undo this action."
+            )
         case .delete(.scheme):
             String(localized: "keymap.schemes.delete.message")
         case .error:
             nil
         }
-    }
-
-    private func hideHighlight() {
-        highlight.hide()
     }
 
     private func appPicker(
@@ -331,7 +347,7 @@ struct KeymapSettingsView: View {
 
     private func copyActiveScheme(to app: SelectableApp) {
         guard runtime.copyActiveScheme(toBundleID: app.bundleIdentifier, appName: app.name) else {
-            presentedAlert = .error(String(localized: "keymap.copyTo.failed"))
+            presentedAlert = .error(String(localized: "keymap.schemes.copyTo.failed"))
             return
         }
     }
@@ -366,7 +382,7 @@ struct KeymapSettingsView: View {
     }
 
     private func nextUntitledSchemeName() -> String {
-        let base = String(localized: "keymap.untitled")
+        let base = String(localized: "keymap.schemes.untitled")
         let existing = Set(runtime.schemes.map(\.name))
         guard existing.contains(base) else { return base }
         var index = 2

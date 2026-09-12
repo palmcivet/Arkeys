@@ -3,7 +3,7 @@ import Targeting
 
 struct AppPickerSheet: View {
     var titleKey: LocalizedStringKey = "picker.title"
-    var confirmKey: LocalizedStringKey = "picker.bind"
+    var confirmKey: LocalizedStringKey = "picker.bindSelected"
     let apps: [SelectableApp]
     let currentBundleID: String?
     @ObservedObject var highlight: TargetHighlightController
@@ -75,14 +75,16 @@ struct AppPickerSheet: View {
             .frame(minHeight: 280)
 
             if !highlight.statusText.isEmpty {
-                Text(String(localized: "picker.preview \(highlight.statusText)"))
+                Text(localizedResource(
+                    "picker.preview",
+                    default: "Preview: \(highlight.statusText)"
+                ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             HStack {
-                Button("picker.cancel") {
-                    highlight.hide()
+                Button("common.cancel") {
                     dismiss()
                 }
                 Spacer()

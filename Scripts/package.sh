@@ -4,16 +4,31 @@
 
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "usage: $0 <version> [output-dir]" >&2
+usage() {
+  cat <<EOF
+Usage: $0 [version] [output-dir]
+
+Build a Release Arkeys.app zip.
+
+  version     optional marketing version; defaults to Config/Version.xcconfig
+  output-dir  optional destination directory; defaults to dist/
+EOF
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ $# -gt 2 ]]; then
+  usage >&2
   exit 1
 fi
 
-VERSION="$1"
-if [[ -z "$VERSION" ]]; then
-  echo "version must not be empty" >&2
-  exit 1
-fi
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VERSION_FILE="$ROOT/Config/Version.xcconfig"
 
 # xcodebuild needs a full Xcode, not Command Line Tools.
 # Prefer an explicit DEVELOPER_DIR, then Xcode.app, so local runs work
@@ -32,7 +47,36 @@ if ! command -v xcodebuild >/dev/null || ! xcodebuild -version >/dev/null 2>&1; 
   exit 1
 fi
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VERSION="${1:-}"
+if [[ -z "$VERSION" ]]; then
+  if [[ ! -f "$VERSION_FILE" ]]; then
+    echo "version is missing and version file not found: $VERSION_FILE" >&2
+    exit 1
+  fi
+  if ! VERSION="$(
+    xcodebuild \
+      -project "$ROOT/Arkeys.xcodeproj" \
+      -scheme Arkeys \
+      -configuration Release \
+      -destination 'generic/platform=macOS' \
+      -showBuildSettings \
+      -json 2>/dev/null |
+      plutil -extract '0.buildSettings.MARKETING_VERSION' raw -o - -
+  )"; then
+    echo "failed to resolve MARKETING_VERSION from $VERSION_FILE" >&2
+    exit 1
+  fi
+fi
+
+if [[ -z "$VERSION" ]]; then
+  echo "MARKETING_VERSION must not be empty: $VERSION_FILE" >&2
+  exit 1
+fi
+if [[ "$VERSION" =~ [[:space:]] ]]; then
+  echo "MARKETING_VERSION must not contain whitespace: $VERSION" >&2
+  exit 1
+fi
+
 OUT="${2:-"$ROOT/dist"}"
 ZIP_NAME="Arkeys-${VERSION}.zip"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/arkeys-package.XXXXXX")"
@@ -54,7 +98,6 @@ xcodebuild \
   -destination 'generic/platform=macOS' \
   -archivePath "$ARCHIVE_PATH" \
   MARKETING_VERSION="$VERSION" \
-  CURRENT_PROJECT_VERSION="$VERSION" \
   CODE_SIGN_IDENTITY="-" \
   CODE_SIGNING_REQUIRED=YES \
   CODE_SIGN_STYLE=Manual \

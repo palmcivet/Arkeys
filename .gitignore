@@ -2,19 +2,8 @@
 
 # Xcode user state
 xcuserdata/
-*.xcuserstate
-*.hmap
+.swiftpm
 
 # Build / package output
 .build/
-.swiftpm
-DerivedData/
-.derivedData/
-build/
 dist/
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Local scratch
-.tmp/

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build a Release Arkeys.app and zip.
-# Usage: scripts/package.sh <version> [output-dir]
+# Build a Release Arkeys.app zip.
+# Writes the zip and checksum to dist/ (or [output-dir]).
+
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
@@ -33,9 +34,15 @@ fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${2:-"$ROOT/dist"}"
-ARCHIVE_PATH="$OUT/Arkeys.xcarchive"
-APP_PATH="$ARCHIVE_PATH/Products/Applications/Arkeys.app"
 ZIP_NAME="Arkeys-${VERSION}.zip"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/arkeys-package.XXXXXX")"
+ARCHIVE_PATH="$WORK/Arkeys.xcarchive"
+APP_PATH="$ARCHIVE_PATH/Products/Applications/Arkeys.app"
+
+cleanup() {
+  rm -rf "$WORK"
+}
+trap cleanup EXIT
 
 cd "$ROOT"
 mkdir -p "$OUT"
@@ -45,7 +52,6 @@ xcodebuild \
   -scheme Arkeys \
   -configuration Release \
   -destination 'generic/platform=macOS' \
-  -derivedDataPath "$ROOT/.derivedData" \
   -archivePath "$ARCHIVE_PATH" \
   MARKETING_VERSION="$VERSION" \
   CURRENT_PROJECT_VERSION="$VERSION" \

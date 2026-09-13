@@ -81,7 +81,7 @@ public final class EventInjector: @unchecked Sendable {
 
         if target.requiresHID && mode != .cascade && mode != .hidTap {
             AppLog.log(.inject, "target requires HID but mode=\(mode.rawValue); "
-                + "Unity/iOS-on-Mac ignore per-PID events — switch to Automatic or Global HID")
+                + "the target was heuristically classified as less compatible with per-PID events")
         }
 
         switch mode {
@@ -197,9 +197,10 @@ public final class EventInjector: @unchecked Sendable {
         let start = CFAbsoluteTimeGetCurrent()
         var steps: [String] = []
 
-        // Apps that require HID-stream injection (iOS-on-Mac and Unity games)
-        // ignore per-PID / SkyLight CGEvents entirely. Skip straight to HID
-        // to avoid the false-positive "posted" from postToPid/SkyLight.
+        // For targets heuristically identified as iOS-on-Mac or Unity, HID is
+        // usually the most compatible route. Skip per-PID / SkyLight in the
+        // automatic path because those APIs can report "posted" even when
+        // the target will not consume the event.
         if target.requiresHID {
             let reason = target.isIOSOnMac ? "iOSOnMac" : "unity"
             let hid = hidTapClick(target: target, cursorBefore: before)
@@ -253,8 +254,9 @@ public final class EventInjector: @unchecked Sendable {
 
     /// Construct a high-fidelity mouse event via `NSEvent` → `.cgEvent` extraction.
     /// Auto-fills ~12 internal fields (source PID, user/group IDs, event-type
-    /// mirrors, window number, etc.) that raw `CGEvent` skips, making the
-    /// event indistinguishable from a real user click to most apps.
+    /// mirrors, window number, etc.) that raw `CGEvent` skips. This improves
+    /// compatibility with applications that expect native-looking mouse events;
+    /// it does not guarantee that a target will consume a per-PID event.
     private func makeTargetedMouseEvent(type: CGEventType, target: InjectionTarget) -> CGEvent? {
         let point = target.clickPointQuartz
         let isClick = type == .leftMouseDown || type == .leftMouseUp

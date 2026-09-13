@@ -85,9 +85,10 @@ Keymaps/{bundleID}/
 ## 运行时关系
 
 ```text
-ContentView / Tray（未来）
-        │
-        ▼
+AppDelegate
+    ├── StatusItemController / Settings
+    │
+    ▼
   InputRuntime          ← 内存态：target、schemes、activeSchemeID、keymap、设置
         │
         ├── AppSettingsStore → settings.json

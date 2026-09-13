@@ -44,10 +44,10 @@ Arkeys is **not sandboxed**. It needs system trust to listen for keys and to pos
 
 - Accessibility
     - Required
-    - Global shortcut listening (`NSEvent`), posting clicks / keys into the target, reading window frames via Accessibility APIs
+    - Global shortcut listening (`NSEvent`), posting clicks into the target, and reading window frames via Accessibility APIs
 - Input Monitoring
     - Optional
-    - Only if Accessibility is already on but **Event Tap** in Settings → Compatibility is still off. Some macOS versions route keyboard event-tap probes through this permission
+    - May be required when the **Event Tap** capability check in Settings → Compatibility is unavailable. The Event Tap row is a status indicator, not a user-configurable switch; some macOS versions route keyboard event-tap probes through this permission
 
 ### Enable Accessibility
 
@@ -93,20 +93,25 @@ PlayCover-style iOS-on-Mac apps often ignore per-process mouse events. If clicks
 
 ## Uninstall
 
-Quit Arkeys from the menu-bar item, then delete the app:
+Download or copy the [uninstall script](./Scripts/uninstall.sh), then run:
 
-```text
-/Applications/Arkeys.app
+```bash
+./uninstall.sh
 ```
 
-Deleting the app does **not** remove settings, keymaps, or system permissions. To remove everything, also delete:
+The script quits Arkeys, deletes `Arkeys.app` from Applications, and removes the files this project actually writes:
 
 ```text
 ~/Library/Application Support/Arkeys/
 ~/Library/Preferences/palmcivet.arkeys.plist
 ```
 
-Then open **System Settings → Privacy & Security** and remove **Arkeys** from **Accessibility** (and **Input Monitoring**, if you added it).
+Preview first with `--dry-run`. Other options:
+
+- `--yes` skip confirmation
+- `--keep-app` reset data only
+
+If `tccutil` cannot clear TCC automatically, remove **Arkeys** from **System Settings → Privacy & Security → Accessibility**.
 
 ## Injection
 
@@ -114,9 +119,9 @@ Settings automatically disables routes that the current system cannot use. A suc
 
 ### Automatic
 
-**Mechanism:** `postToPid` → SkyLight → HID
+**Mechanism:** target-aware, availability-based cascade
 
-Picks the best available method for this Mac and target. Prefer this for everyday use.
+For ordinary targets, Arkeys tries `postToPid`, then SkyLight, then Global HID only when the current route reports failure. Targets detected as iOS-on-Mac or Unity go directly to Global HID because those targets often ignore per-process events. Arkeys cannot tell whether a target consumed a successfully posted event, so this is not a guaranteed response-based fallback. Prefer this for everyday use.
 
 ### Post to Process
 
@@ -128,7 +133,7 @@ Posts into the target process without a global HID move or cursor warp. Works fo
 
 **Mechanism:** Private `SLEventPostToPid` (`dlsym`)
 
-Same family as `postToPid` on current macOS. Does not beat Unity / most game input filters. The symbol exists only on supported OS versions.
+On the macOS versions tested by this project, it behaves like `postToPid`. It does not reliably bypass Unity or most game input filters. The symbol exists only on supported OS versions, so Arkeys probes it and soft-fails when unavailable.
 
 ### Global HID
 

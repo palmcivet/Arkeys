@@ -12,18 +12,18 @@ public struct InjectionTarget: Sendable {
     public let clickPointAppKit: CGPoint
     /// Screen coordinates in Quartz/CGEvent space (origin top-left).
     public let clickPointQuartz: CGPoint
-    /// True when the target is an iOS app running on macOS (via PlayCover,
-    /// App Store iPad app, etc.). These apps use UIKit's mouse-to-touch
-    /// translation; only HID-stream events reach their touch pipeline.
+    /// Heuristic match for an iOS app running on macOS (via PlayCover,
+    /// App Store iPad app, etc.). These apps often use UIKit's mouse-to-touch
+    /// translation, so HID-stream events are usually the most compatible.
     public let isIOSOnMac: Bool
-    /// True when the target is a Unity engine application. Unity games on
-    /// macOS ignore per-PID CGEvents; only HID-stream events reach their
-    /// input pipeline — same limitation as iOS-on-Mac targets.
+    /// Heuristic match for a Unity engine application. Many Unity games on
+    /// macOS ignore per-PID CGEvents, so HID-stream events are usually the
+    /// most compatible route.
     public let isUnityApp: Bool
 
-    /// Whether this target requires HID-stream injection (cursor warp).
-    /// Covers iOS-on-Mac apps AND Unity games, both of which silently
-    /// ignore per-PID / SkyLight CGEvents.
+    /// Whether Automatic mode should prefer HID-stream injection (cursor
+    /// warp) for this target. This is an empirically based heuristic, not a
+    /// guarantee about the target's input implementation.
     public var requiresHID: Bool { isIOSOnMac || isUnityApp }
 
     public init(
@@ -135,10 +135,9 @@ public enum TargetResolver {
 
     // MARK: - App runtime detection (iOS-on-Mac, Unity)
 
-    /// Detect whether the app is an iOS/iPadOS binary running on macOS.
-    /// These apps use UIKit's mouse-to-touch translation layer; only events
-    /// from the real HID stream reach their touch pipeline — `postToPid`
-    /// CGEvents are silently ignored.
+    /// Heuristically detect an iOS/iPadOS binary running on macOS.
+    /// Such apps often use UIKit's mouse-to-touch translation layer and may
+    /// ignore `postToPid` CGEvents, so Automatic mode prefers HID for them.
     private static func detectIOSOnMac(app: NSRunningApplication) -> Bool {
         guard let bundleURL = app.bundleURL else { return false }
 
@@ -161,10 +160,9 @@ public enum TargetResolver {
         return false
     }
 
-    /// Detect whether the app is a Unity game engine application.
-    /// Unity apps on macOS ignore per-PID CGEvents (`postToPid`, SkyLight);
-    /// only HID-stream events reach their input pipeline. Similar to
-    /// iOS-on-Mac, cascade mode must skip straight to HID for these targets.
+    /// Heuristically detect a Unity game engine application.
+    /// Many Unity apps ignore per-PID CGEvents (`postToPid`, SkyLight);
+    /// Automatic mode therefore prefers HID for these targets.
     private static func detectUnityApp(app: NSRunningApplication) -> Bool {
         guard let bundleURL = app.bundleURL else { return false }
         let fm = FileManager.default

@@ -44,10 +44,10 @@ Arkeys **未启用沙盒**。监听按键、向其他进程投递点击，都需
 
 - 辅助功能
     - 必须
-    - 全局快捷键监听（`NSEvent`）、向目标投递点击/按键、通过辅助功能 API 读取窗口位置
+    - 全局快捷键监听（`NSEvent`）、向目标投递点击、通过辅助功能 API 读取窗口位置
 - 输入监控
     - 可选
-    - 仅当已打开辅助功能，但「设置 → 兼容性」里 **事件监听** 仍为关时再考虑。部分系统上键盘 Event Tap 探测会走这项
+    - 若「设置 → 兼容性」中的 **Event Tap** 能力探测不可用，部分系统可能需要此权限。Event Tap 一栏只是状态显示，并不是可手动开关的选项
 
 ### 打开辅助功能
 
@@ -93,20 +93,25 @@ PlayCover 这类 iOS-on-Mac 应用常常忽略按进程投递的鼠标事件。�
 
 ## 卸载
 
-先从菜单栏退出 Arkeys，再删除应用：
+下载或复制 [卸载脚本](./Scripts/uninstall.sh)，执行：
 
-```text
-/Applications/Arkeys.app
+```bash
+./uninstall.sh
 ```
 
-只删 `.app` **不会**清掉设置、键位方案和系统授权。如需彻底移除，一并删除：
+脚本会退出 Arkeys，删除 Applications 里的 `Arkeys.app`，并清掉本项目实际写入的文件：
 
 ```text
 ~/Library/Application Support/Arkeys/
 ~/Library/Preferences/palmcivet.arkeys.plist
 ```
 
-然后打开 **系统设置 → 隐私与安全性**，从 **辅助功能** 中移除 **Arkeys**（若曾勾选 **输入监控**，一并去掉）。
+可先加 `--dry-run` 预览。此外还支持其他选项：
+
+- `--yes` 跳过确认
+- `--keep-app` 只清数据
+
+若 `tccutil` 无法自动清 TCC，请到 **系统设置 → 隐私与安全性 → 辅助功能** 里移除 **Arkeys**。
 
 ## 注入方式
 
@@ -114,9 +119,9 @@ PlayCover 这类 iOS-on-Mac 应用常常忽略按进程投递的鼠标事件。�
 
 ### 自动
 
-**机制：** `postToPid` → SkyLight → HID
+**机制：** 根据目标和能力进行分层降级
 
-按本机能力和目标自动选择。日常使用优先选这项。
+普通目标会依次尝试 `postToPid`、SkyLight，只有当前路径报告失败时才继续尝试全局 HID。检测为 iOS-on-Mac 或 Unity 的目标会直接使用全局 HID，因为这类目标经常忽略按进程投递的事件。Arkeys 无法判断目标是否真正消费了一个“投递成功”的事件，因此这不是基于目标响应的可靠回退。日常使用优先选这项。
 
 ### 按进程投递
 
@@ -128,7 +133,7 @@ PlayCover 这类 iOS-on-Mac 应用常常忽略按进程投递的鼠标事件。�
 
 **机制：** 私有 `SLEventPostToPid`（`dlsym` 解析）
 
-在当前 macOS 上与 `postToPid` 同族。不能突破 Unity / 多数游戏的输入过滤。所需符号仅在受支持的系统版本上存在。
+在本项目测试过的 macOS 版本上，它的行为与 `postToPid` 相同。不能稳定突破 Unity / 多数游戏的输入过滤。所需符号仅在受支持的系统版本上存在，因此 Arkeys 会先探测，无法使用时软失败。
 
 ### 全局 HID
 

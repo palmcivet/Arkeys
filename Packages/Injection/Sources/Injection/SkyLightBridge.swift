@@ -5,9 +5,9 @@ import Targeting
 
 /// Soft-loads SkyLight private symbols. Never hard-link the framework.
 ///
-/// On current macOS, `CGEventPostToPid` is a re-export of `SLEventPostToPid`
-/// — same implementation. The C ABI is `(pid_t, CGEventRef)`, **not**
-/// `(CGEventRef, pid_t)` — reversing the parameters causes `EXC_BAD_ACCESS`.
+/// On macOS versions tested by this project, `SLEventPostToPid` behaves like
+/// the public `CGEventPostToPid`. The C ABI is `(pid_t, CGEventRef)`, **not**
+/// `(CGEventRef, pid_t)`; reversing the parameters is unsafe and can crash.
 public final class SkyLightBridge: @unchecked Sendable {
     public static let shared = SkyLightBridge()
 

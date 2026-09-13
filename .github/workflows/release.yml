@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
@@ -28,78 +28,70 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      - name: Resolve release
-        id: release
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
+      - name: Resolve version
         run: |
-          resolve_version() {
-            awk '$1 == "MARKETING_VERSION" && $2 == "=" { print $3; exit }' \
-              "$@"
-          }
-
-          version="$(resolve_version Config/Version.xcconfig)"
-          if [[ -z "$version" ]]; then
-            echo "MARKETING_VERSION is empty" >&2
-            exit 1
-          fi
-
-          if ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
-            echo "cannot resolve the commit before this push: $BEFORE_SHA" >&2
-            exit 1
-          fi
-
-          if previous_config="$(
-            git show "${BEFORE_SHA}:Config/Version.xcconfig" 2>/dev/null
-          )"; then
-            previous_version="$(
-              printf '%s\n' "$previous_config" | resolve_version
-            )"
-            if [[ -z "$previous_version" ]]; then
-              echo "previous MARKETING_VERSION is empty" >&2
-              exit 1
-            fi
-          else
-            previous_version="<none>"
-          fi
-
-          if [[ "$version" == "$previous_version" ]]; then
-            echo "MARKETING_VERSION did not change; skipping release"
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if git rev-parse --quiet --verify "refs/tags/v${version}" >/dev/null; then
-            echo "tag v${version} already exists; refusing to publish it again" >&2
-            exit 1
-          fi
-
-          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          version="$(awk '$1 == "MARKETING_VERSION" { print $3; exit }' Config/Version.xcconfig)"
           echo "VERSION=$version" >> "$GITHUB_ENV"
-          echo "Publishing Arkeys $previous_version -> $version from $GITHUB_SHA"
-
-      - name: Show Xcode
-        if: steps.release.outputs.should_publish == 'true'
-        run: xcodebuild -version
 
       - name: Build and test
-        if: steps.release.outputs.should_publish == 'true'
         run: make test
 
       - name: Archive and package
-        if: steps.release.outputs.should_publish == 'true'
         run: ./Scripts/package.sh "$VERSION"
 
+      - name: Resolve release notes
+        run: |
+          git log -1 --no-merges --format='%b' \
+            --grep="^chore(release): v${VERSION}$" > release-notes.md
+
+      - name: Mint publisher token
+        id: publisher
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.PUBLISHER_CLIENT_ID }}
+          private-key: ${{ secrets.PUBLISHER_PRIVATE_KEY }}
+          repositories: Arkeys
+
       - name: Publish GitHub Release
-        if: steps.release.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ steps.publisher.outputs.token }}
           tag_name: v${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           name: Arkeys ${{ env.VERSION }}
-          generate_release_notes: true
+          generate_release_notes: false
           prerelease: ${{ contains(env.VERSION, '-') }}
+          body_path: release-notes.md
           fail_on_unmatched_files: true
           files: |
             dist/Arkeys-${{ env.VERSION }}.zip
             dist/SHA256SUMS
+
+      - name: Mint tap token
+        if: ${{ !contains(env.VERSION, '-') }}
+        id: tap
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.PUBLISHER_CLIENT_ID }}
+          private-key: ${{ secrets.PUBLISHER_PRIVATE_KEY }}
+          owner: palmcivet
+          repositories: homebrew-tap
+          permission-contents: write
+          permission-metadata: read
+
+      - name: Notify Homebrew tap
+        if: ${{ !contains(env.VERSION, '-') }}
+        env:
+          GH_TOKEN: ${{ steps.tap.outputs.token }}
+          VERSION: ${{ env.VERSION }}
+        run: |
+          gh api --method POST repos/palmcivet/homebrew-tap/dispatches \
+            --input - <<EOF
+          {
+            "event_type": "package-release",
+            "client_payload": {
+              "package": "arkeys",
+              "tag": "v${VERSION}"
+            }
+          }
+          EOF

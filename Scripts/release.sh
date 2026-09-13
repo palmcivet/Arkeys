@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The script prepares release notes and version, then creates a commit.
+# Validate and create a release commit.
 
 set -euo pipefail
 
@@ -33,16 +33,6 @@ esac
 
 cd "$ROOT"
 
-if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
-  echo "release must be run inside a Git repository" >&2
-  exit 1
-fi
-
-if [[ ! -f "$VERSION_FILE" ]]; then
-  echo "version file not found: $VERSION_FILE" >&2
-  exit 1
-fi
-
 if ! git diff --quiet ||
    ! git diff --cached --quiet ||
    [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
@@ -51,46 +41,21 @@ if ! git diff --quiet ||
   exit 1
 fi
 
-version_values="$(
-  awk '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
-
-    {
-      separator = index($0, "=")
-      if (!separator) {
-        next
-      }
-
-      key = trim(substr($0, 1, separator - 1))
-      value = trim(substr($0, separator + 1))
-      sub(/[[:space:]]*\/\/.*/, "", value)
-      value = trim(value)
-
-      if (key == "MARKETING_VERSION") {
-        marketing_version = value
-        marketing_found++
-      } else if (key == "CURRENT_PROJECT_VERSION") {
-        current_project_version = value
-        build_found++
-      }
-    }
-
-    END {
-      if (marketing_found != 1 || build_found != 1) {
-        exit 1
-      }
-      printf "%s\t%s\n", marketing_version, current_project_version
-    }
-  ' "$VERSION_FILE"
-)" || {
-  echo "MARKETING_VERSION and CURRENT_PROJECT_VERSION are required exactly once in $VERSION_FILE" >&2
-  exit 1
+version_tmp=""
+commit_message_tmp=""
+cleanup() {
+  rm -f "$RELEASE_NOTE_FILE"
+  [[ -z "$version_tmp" ]] || rm -f "$version_tmp"
+  [[ -z "$commit_message_tmp" ]] || rm -f "$commit_message_tmp"
 }
+trap cleanup EXIT
 
-IFS=$'\t' read -r current_version current_build <<< "$version_values"
+current_version="$(
+  awk '$1 == "MARKETING_VERSION" { print $3; exit }' "$VERSION_FILE"
+)"
+current_build="$(
+  awk '$1 == "CURRENT_PROJECT_VERSION" { print $3; exit }' "$VERSION_FILE"
+)"
 if [[ -z "$current_version" || -z "$current_build" ]]; then
   echo "MARKETING_VERSION and CURRENT_PROJECT_VERSION are required in $VERSION_FILE" >&2
   exit 1
@@ -101,57 +66,37 @@ if [[ ! "$current_build" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-release_commit="$(
-  git log -1 --first-parent --no-merges \
-    --format='%H' --grep='^chore(release): v' HEAD
+previous_tag="$(
+  git describe --tags --match='v[0-9]*' --abbrev=0 HEAD 2>/dev/null || true
 )"
-release_ref=""
-release_label="the beginning of the repository"
-
-if [[ -n "$release_commit" ]]; then
-  release_ref="$release_commit"
-  release_label="$(git show -s --format='%s' "$release_commit")"
-else
-  release_tag="$(git describe --tags --match='v[0-9]*' --abbrev=0 HEAD 2>/dev/null || true)"
-  if [[ -n "$release_tag" ]]; then
-    release_ref="$release_tag"
-    release_label="$release_tag"
-  fi
+range="HEAD"
+if [[ -n "$previous_tag" ]]; then
+  range="$previous_tag..HEAD"
 fi
 
-log_range=HEAD
-if [[ -n "$release_ref" ]]; then
-  log_range="$release_ref..HEAD"
-fi
-
-generated_notes="$(
-  git log "$log_range" --no-merges --reverse --format='- %s (%h)'
-)"
-
-if [[ -z "$generated_notes" ]]; then
-  echo "no commits found since $release_label; nothing to release" >&2
+git log "$range" --no-merges --reverse --format='- %s (%h)' > "$RELEASE_NOTE_FILE"
+if [[ ! -s "$RELEASE_NOTE_FILE" ]]; then
+  echo "no commits found since ${previous_tag:-the repository began}" >&2
+  rm -f "$RELEASE_NOTE_FILE"
   exit 1
 fi
 
-printf '%s\n' "$generated_notes" > "$RELEASE_NOTE_FILE"
-echo "Release notes from $release_label to HEAD were written to:"
+echo "Release notes for $range were written to:"
 echo "  .release-note"
 
-read -r -p "Confirm these release notes and continue? [y/N] " notes_confirm
+read -r -p "Continue with these release notes? [y/N] " notes_confirm
 if [[ ! "$notes_confirm" =~ ^[Yy]$ ]]; then
   echo "release cancelled"
   exit 0
 fi
-
-if [[ ! -s "$RELEASE_NOTE_FILE" ]] ||
-   [[ -z "$(sed '/^[[:space:]]*$/d' "$RELEASE_NOTE_FILE")" ]]; then
-  echo "release notes are empty; release cancelled" >&2
+if [[ ! -s "$RELEASE_NOTE_FILE" ]]; then
+  echo ".release-note must not be empty" >&2
   exit 1
 fi
 
 while :; do
   read -r -p "New marketing version (current: $current_version): " new_version
-  if [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] &&
+  if [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]] &&
      [[ "$new_version" != "$current_version" ]]; then
     break
   fi
@@ -159,70 +104,49 @@ while :; do
 done
 
 next_build=$((current_build + 1))
+tag="v$new_version"
+
+if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+  echo "tag already exists: $tag" >&2
+  exit 1
+fi
+
 echo
 echo "The release will:"
 echo "  version: $current_version -> $new_version"
 echo "  build:   $current_build -> $next_build"
 echo "  commit:  chore(release): v$new_version"
 
+read -r -p "Continue? [y/N] " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "release cancelled"
+  exit 0
+fi
+
 version_tmp="$(mktemp "${TMPDIR:-/tmp}/arkeys-version.XXXXXX")"
 commit_message_tmp="$(mktemp "${TMPDIR:-/tmp}/arkeys-commit-message.XXXXXX")"
-cleanup_files() {
-  rm -f "$version_tmp" "$commit_message_tmp"
-}
-trap cleanup_files EXIT
 
 awk -v version="$new_version" -v build="$next_build" '
-  function trim(value) {
-    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-    return value
+  /^[[:space:]]*MARKETING_VERSION[[:space:]]*=/ {
+    print "MARKETING_VERSION = " version
+    next
   }
-
-  {
-    separator = index($0, "=")
-    if (!separator) {
-      print
-      next
-    }
-
-    key = trim(substr($0, 1, separator - 1))
-    if (key == "MARKETING_VERSION") {
-      value = version
-      marketing_found++
-    } else if (key == "CURRENT_PROJECT_VERSION") {
-      value = build
-      build_found++
-    } else {
-      print
-      next
-    }
-
-    prefix = substr($0, 1, separator)
-    suffix = substr($0, separator + 1)
-    comment = ""
-    if (match(suffix, /[[:space:]]*\/\/.*/)) {
-      comment = substr(suffix, RSTART)
-    }
-    print prefix " " value comment
+  /^[[:space:]]*CURRENT_PROJECT_VERSION[[:space:]]*=/ {
+    print "CURRENT_PROJECT_VERSION = " build
+    next
   }
-
-  END {
-    if (marketing_found != 1 || build_found != 1) {
-      exit 1
-    }
-  }
+  { print }
 ' "$VERSION_FILE" > "$version_tmp"
-mv "$version_tmp" "$VERSION_FILE"
+cat "$version_tmp" > "$VERSION_FILE"
 
 {
-  printf 'chore(release): v%s\n\n' "$new_version"
+  printf 'chore(release): %s\n\n' "$tag"
   cat "$RELEASE_NOTE_FILE"
   printf '\n'
 } > "$commit_message_tmp"
 
 git add "$VERSION_FILE"
 git commit -F "$commit_message_tmp"
-rm -f "$RELEASE_NOTE_FILE"
 
-echo "created release commit for v$new_version"
+echo "created release commit for $tag"
 echo "push it or merge its PR into master to publish the release"

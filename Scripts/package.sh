@@ -28,7 +28,6 @@ if [[ $# -gt 2 ]]; then
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION_FILE="$ROOT/Config/Version.xcconfig"
 
 # xcodebuild needs a full Xcode, not Command Line Tools.
 # Prefer an explicit DEVELOPER_DIR, then Xcode.app, so local runs work
@@ -49,11 +48,7 @@ fi
 
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-  if [[ ! -f "$VERSION_FILE" ]]; then
-    echo "version is missing and version file not found: $VERSION_FILE" >&2
-    exit 1
-  fi
-  if ! VERSION="$(
+  VERSION="$(
     xcodebuild \
       -project "$ROOT/Arkeys.xcodeproj" \
       -scheme Arkeys \
@@ -62,19 +57,7 @@ if [[ -z "$VERSION" ]]; then
       -showBuildSettings \
       -json 2>/dev/null |
       plutil -extract '0.buildSettings.MARKETING_VERSION' raw -o - -
-  )"; then
-    echo "failed to resolve MARKETING_VERSION from $VERSION_FILE" >&2
-    exit 1
-  fi
-fi
-
-if [[ -z "$VERSION" ]]; then
-  echo "MARKETING_VERSION must not be empty: $VERSION_FILE" >&2
-  exit 1
-fi
-if [[ "$VERSION" =~ [[:space:]] ]]; then
-  echo "MARKETING_VERSION must not contain whitespace: $VERSION" >&2
-  exit 1
+  )"
 fi
 
 OUT="${2:-"$ROOT/dist"}"

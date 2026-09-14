@@ -13,6 +13,7 @@
 - [Permissions](#permissions)
     - [Enable Accessibility](#enable-accessibility)
 - [Install](#install)
+    - [Homebrew](#homebrew)
     - [From a release](#from-a-release)
     - [From source](#from-source)
 - [Get started](#get-started)
@@ -61,6 +62,14 @@ You can jump to the pane from **Settings → Compatibility → Grant Permission*
 Without Accessibility, shortcuts will not fire and injection will fail.
 
 ## Install
+
+### Homebrew
+
+```bash
+brew install --cask palmcivet/tap/arkeys
+```
+
+If Gatekeeper blocks the app on first launch: Control-click the icon and choose **Open**, or allow it under **System Settings → Privacy & Security**.
 
 ### From a release
 

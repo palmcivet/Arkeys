@@ -18,6 +18,18 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var showMenuBarIcon: Bool
     public var keymapButtonShape: KeymapButtonShape
     public var showKeymapOverlay: Bool
+    /// HUD keycap opacity while “Always Show Shortcuts” is on.
+    /// Max is the previous hardcoded appearance; min stays readable.
+    public var keymapOverlayOpacity: Double
+
+    public static let keymapOverlayOpacityMinimum = 0.30
+    public static let keymapOverlayOpacityMaximum = 0.88
+    public static let keymapOverlayOpacityDefault = keymapOverlayOpacityMaximum
+
+    public static func clampedKeymapOverlayOpacity(_ value: Double) -> Double {
+        guard value.isFinite else { return keymapOverlayOpacityDefault }
+        return min(keymapOverlayOpacityMaximum, max(keymapOverlayOpacityMinimum, value))
+    }
 
     public init(
         lastTargetBundleID: String? = nil,
@@ -28,7 +40,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         restoreCursorAfterHID: Bool = true,
         showMenuBarIcon: Bool = true,
         keymapButtonShape: KeymapButtonShape = .circle,
-        showKeymapOverlay: Bool = false
+        showKeymapOverlay: Bool = false,
+        keymapOverlayOpacity: Double = keymapOverlayOpacityDefault
     ) {
         self.lastTargetBundleID = lastTargetBundleID
         self.lastTargetAppName = lastTargetAppName
@@ -39,6 +52,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         self.showMenuBarIcon = showMenuBarIcon
         self.keymapButtonShape = keymapButtonShape
         self.showKeymapOverlay = showKeymapOverlay
+        self.keymapOverlayOpacity = Self.clampedKeymapOverlayOpacity(keymapOverlayOpacity)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -51,6 +65,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         case showMenuBarIcon
         case keymapButtonShape
         case showKeymapOverlay
+        case keymapOverlayOpacity
     }
 
     public init(from decoder: Decoder) throws {
@@ -64,6 +79,9 @@ public struct AppSettings: Codable, Hashable, Sendable {
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
         keymapButtonShape = try container.decodeIfPresent(KeymapButtonShape.self, forKey: .keymapButtonShape) ?? .circle
         showKeymapOverlay = try container.decodeIfPresent(Bool.self, forKey: .showKeymapOverlay) ?? false
+        let overlayOpacity = try container.decodeIfPresent(Double.self, forKey: .keymapOverlayOpacity)
+            ?? Self.keymapOverlayOpacityDefault
+        keymapOverlayOpacity = Self.clampedKeymapOverlayOpacity(overlayOpacity)
     }
 }
 

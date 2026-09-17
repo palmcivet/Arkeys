@@ -25,7 +25,6 @@ struct KeymapKeycap: View {
             .frame(width: box.width, height: box.height)
             .background(chrome)
             .shadow(color: .black.opacity(isOverlay ? 0.18 : 0.28), radius: 1.5, y: 1)
-            .opacity(isOverlay ? 0.88 : 1)
     }
 
     private var isOverlay: Bool {

@@ -138,9 +138,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func bindKeymapHUD(_ runtime: InputRuntime) {
         runtime.$keymap
-            .combineLatest(runtime.$keymapButtonShape)
-            .sink { [weak self] keymap, shape in
-                self?.keymapHUD.updateAppearance(keymap: keymap, buttonShape: shape)
+            .combineLatest(runtime.$keymapButtonShape, runtime.$keymapOverlayOpacity)
+            .sink { [weak self] keymap, shape, opacity in
+                self?.keymapHUD.updateAppearance(
+                    keymap: keymap,
+                    buttonShape: shape,
+                    overlayOpacity: opacity
+                )
             }
             .store(in: &cancellables)
 

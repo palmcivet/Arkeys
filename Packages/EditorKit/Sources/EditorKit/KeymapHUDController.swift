@@ -12,6 +12,7 @@ import Targeting
 public final class KeymapHUDController: ObservableObject {
     @Published public var keymap: CanonicalKeymap = CanonicalKeymap()
     @Published public var buttonShape: KeymapButtonShape = .circle
+    private var overlayOpacity: Double = AppSettings.keymapOverlayOpacityDefault
 
     private var overlayWindow: NSWindow?
     private var activationObserver: NSObjectProtocol?
@@ -50,11 +51,23 @@ public final class KeymapHUDController: ObservableObject {
         }
     }
 
-    public func updateAppearance(keymap: CanonicalKeymap, buttonShape: KeymapButtonShape) {
-        guard self.keymap != keymap || self.buttonShape != buttonShape else { return }
-        self.keymap = keymap
-        self.buttonShape = buttonShape
-        if isRunning, !isWindowTransforming {
+    public func updateAppearance(
+        keymap: CanonicalKeymap,
+        buttonShape: KeymapButtonShape,
+        overlayOpacity: Double
+    ) {
+        let contentChanged = self.keymap != keymap || self.buttonShape != buttonShape
+        let opacityChanged = self.overlayOpacity != overlayOpacity
+        guard contentChanged || opacityChanged else { return }
+        if contentChanged {
+            self.keymap = keymap
+            self.buttonShape = buttonShape
+        }
+        if opacityChanged {
+            self.overlayOpacity = overlayOpacity
+            applyOverlayOpacity()
+        }
+        if contentChanged, isRunning, !isWindowTransforming {
             syncOverlayPresentation()
         }
     }
@@ -108,6 +121,7 @@ public final class KeymapHUDController: ObservableObject {
         window.contentView = NSHostingView(rootView: KeymapHUDView(controller: self))
         window.hideFromAccessibility()
         overlayWindow = window
+        applyOverlayOpacity()
     }
 
     private func startFollowing() {
@@ -236,6 +250,10 @@ public final class KeymapHUDController: ObservableObject {
         }
         overlayWindow.setFrame(frame, display: true)
         lastOverlayFrame = frame
+    }
+
+    private func applyOverlayOpacity() {
+        overlayWindow?.alphaValue = CGFloat(overlayOpacity)
     }
 
     private func hideOverlay(clearFrame: Bool = true) {

@@ -225,7 +225,8 @@ final class KeymapCoreTests: XCTestCase {
             restoreCursorAfterHID: true,
             showMenuBarIcon: false,
             keymapButtonShape: .rectangle,
-            showKeymapOverlay: true
+            showKeymapOverlay: true,
+            keymapOverlayOpacity: 0.5
         )
         try store.save(settings)
         let loaded = store.load()
@@ -236,6 +237,7 @@ final class KeymapCoreTests: XCTestCase {
         XCTAssertFalse(loaded.showMenuBarIcon)
         XCTAssertEqual(loaded.keymapButtonShape, .rectangle)
         XCTAssertTrue(loaded.showKeymapOverlay)
+        XCTAssertEqual(loaded.keymapOverlayOpacity, 0.5)
     }
 
     func testAppSettingsDefaultsMissingOptionalFields() throws {
@@ -252,6 +254,32 @@ final class KeymapCoreTests: XCTestCase {
         let loaded = AppSettingsStore(fileURL: url).load()
         XCTAssertEqual(loaded.keymapButtonShape, .circle)
         XCTAssertFalse(loaded.showKeymapOverlay)
+        XCTAssertEqual(loaded.keymapOverlayOpacity, AppSettings.keymapOverlayOpacityDefault)
+    }
+
+    func testAppSettingsClampsOverlayOpacity() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathComponent("settings.json")
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        let store = AppSettingsStore(fileURL: url)
+        try store.save(AppSettings(keymapOverlayOpacity: 0))
+        XCTAssertEqual(store.load().keymapOverlayOpacity, AppSettings.keymapOverlayOpacityMinimum)
+
+        try store.save(AppSettings(keymapOverlayOpacity: 1))
+        XCTAssertEqual(store.load().keymapOverlayOpacity, AppSettings.keymapOverlayOpacityMaximum)
+
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"keymapOverlayOpacity":0}"#.utf8).write(to: url)
+        XCTAssertEqual(store.load().keymapOverlayOpacity, AppSettings.keymapOverlayOpacityMinimum)
+
+        try Data(#"{"keymapOverlayOpacity":1}"#.utf8).write(to: url)
+        XCTAssertEqual(store.load().keymapOverlayOpacity, AppSettings.keymapOverlayOpacityMaximum)
+
+        XCTAssertEqual(AppSettings.clampedKeymapOverlayOpacity(.nan), AppSettings.keymapOverlayOpacityDefault)
+        XCTAssertEqual(AppSettings.clampedKeymapOverlayOpacity(.infinity), AppSettings.keymapOverlayOpacityDefault)
+        XCTAssertEqual(AppSettings.clampedKeymapOverlayOpacity(-.infinity), AppSettings.keymapOverlayOpacityDefault)
     }
 
     func testNormalizedSizeClampAndPlayCoverPercent() throws {

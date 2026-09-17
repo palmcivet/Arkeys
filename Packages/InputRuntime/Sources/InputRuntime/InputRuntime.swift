@@ -50,6 +50,9 @@ public final class InputRuntime: ObservableObject {
     @Published public var showKeymapOverlay: Bool = false {
         didSet { persistSettings() }
     }
+    @Published public var keymapOverlayOpacity: Double = AppSettings.keymapOverlayOpacityDefault {
+        didSet { persistSettings() }
+    }
     @Published public var isEditing: Bool = false
     @Published public var capability: CapabilityReport?
     @Published public var lastInjectSummary: String = ""
@@ -726,6 +729,7 @@ public final class InputRuntime: ObservableObject {
         showMenuBarIcon = settings.showMenuBarIcon
         keymapButtonShape = settings.keymapButtonShape
         showKeymapOverlay = settings.showKeymapOverlay
+        keymapOverlayOpacity = settings.keymapOverlayOpacity
         pendingInjectModeRaw = settings.injectModeRaw
         injectMode = InjectMode.resolvedProductMode(raw: settings.injectModeRaw, report: nil)
         AppLog.log(.capability, "settings: mode=\(injectMode.rawValue) "
@@ -768,7 +772,8 @@ public final class InputRuntime: ObservableObject {
             restoreCursorAfterHID: restoreCursorAfterHID,
             showMenuBarIcon: showMenuBarIcon,
             keymapButtonShape: keymapButtonShape,
-            showKeymapOverlay: showKeymapOverlay
+            showKeymapOverlay: showKeymapOverlay,
+            keymapOverlayOpacity: keymapOverlayOpacity
         )
         do {
             try settingsStore.save(settings)

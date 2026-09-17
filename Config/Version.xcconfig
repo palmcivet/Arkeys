@@ -1,5 +1,5 @@
 // User-facing app version.
-MARKETING_VERSION = 0.1.1
+MARKETING_VERSION = 0.1.2
 
 // Numeric build number.
-CURRENT_PROJECT_VERSION = 2
+CURRENT_PROJECT_VERSION = 3

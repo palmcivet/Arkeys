@@ -1,6 +1,7 @@
 import Cocoa
 import Combine
 import SwiftUI
+import AppUpdates
 import InputRuntime
 import EditorKit
 import Targeting
@@ -9,6 +10,7 @@ import Targeting
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private(set) var runtime: InputRuntime?
     private let statusItemController = StatusItemController()
+    private let updateController = AppUpdateController()
     private let editorSession = EditorSession()
     private let keymapHUD = KeymapHUDController()
     private var settingsWindow: NSWindow?
@@ -44,7 +46,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItemController.onOpenSettings = { [weak self] in
             self?.openSettings()
         }
-        statusItemController.attach(runtime: runtime, editorSession: editorSession)
+        statusItemController.attach(
+            runtime: runtime,
+            editorSession: editorSession
+        )
 
         runtime.$showMenuBarIcon
             .receive(on: RunLoop.main)
@@ -92,7 +97,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let runtime else { return }
 
         if settingsWindow == nil {
-            let tabs = SettingsTabViewController(runtime: runtime, editorSession: editorSession)
+            let tabs = SettingsTabViewController(
+                runtime: runtime,
+                editorSession: editorSession,
+                updateController: updateController
+            )
             let initialHeight = SettingsTabViewController.Pane.general.contentHeight
 
             // Preference window: titled + closable. Width fixed; height follows selected pane.
@@ -112,12 +121,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.delegate = self
             window.center()
             settingsWindow = window
+            updateController.presentingWindow = window
         }
 
         isSettingsVisible = true
         refreshActivationPolicy()
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+        Task { await updateController.checkWhenOpeningSettings() }
     }
 
     private func hideSettingsForEditing() {

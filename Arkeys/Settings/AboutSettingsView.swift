@@ -1,8 +1,11 @@
 import SwiftUI
+import AppUpdates
 
 struct AboutSettingsView: View {
+    @EnvironmentObject private var updates: AppUpdateController
+
     private var versionString: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let short = AppUpdate.currentVersion() ?? "—"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         if let build, build != short {
             return "\(short) (\(build))"
@@ -19,8 +22,18 @@ struct AboutSettingsView: View {
                         .textSelection(.enabled)
                 }
 
-                Button("about.checkUpdate") {}
-                    .disabled(true)
+                Button {
+                    Task {
+                        await updates.checkManually()
+                    }
+                } label: {
+                    if updates.isChecking {
+                        Text("about.checkUpdate.checking")
+                    } else {
+                        Text("about.checkUpdate")
+                    }
+                }
+                .disabled(updates.isChecking)
             }
         }
         .formStyle(.grouped)

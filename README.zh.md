@@ -17,6 +17,7 @@
     - [从 Release 安装](#从-release-安装)
     - [从源码编译](#从源码编译)
 - [开始使用](#开始使用)
+- [更新](#更新)
 - [卸载](#卸载)
 - [注入方式](#注入方式)
     - [自动](#自动)
@@ -99,6 +100,18 @@ open Arkeys.xcodeproj
 5. 切回目标应用，按下已绑定的键。
 
 PlayCover 这类 iOS-on-Mac 应用常常忽略按进程投递的鼠标事件。若完全点不上，把注入方式改成 **全局 HID**（光标可能短暂跳动，进行中的拖拽可能被打断）。
+
+## 更新
+
+Arkeys 不会自动下载或安装更新。可到 [GitHub Releases](https://github.com/palmcivet/Arkeys/releases) 查看是否有新版本。
+
+打开设置时会向 GitHub 查询是否有新版本，每天最多一次。检查失败通常是因为无法访问 GitHub，且不会占用当天的自动检查。也可以在 **设置 → 关于 → 检查更新** 手动检查。
+
+若有新版本，打开 Release 页，下载最新构建并替换 `/Applications` 里的 `Arkeys.app`。也可以用 Homebrew 升级：
+
+```bash
+brew upgrade --cask palmcivet/tap/arkeys
+```
 
 ## 卸载
 

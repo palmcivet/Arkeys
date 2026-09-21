@@ -17,6 +17,7 @@
     - [From a release](#from-a-release)
     - [From source](#from-source)
 - [Get started](#get-started)
+- [Updates](#updates)
 - [Uninstall](#uninstall)
 - [Injection](#injection)
     - [Automatic](#automatic)
@@ -99,6 +100,18 @@ Local or ad-hoc signed builds are a new binary to TCC. Re-grant Accessibility if
 5. Switch back to the target app and press a bound key.
 
 PlayCover-style iOS-on-Mac apps often ignore per-process mouse events. If clicks never land, switch the route to **Global HID** (the cursor may move briefly; an in-progress drag can be interrupted).
+
+## Updates
+
+Arkeys does not download or install updates. You can check [GitHub Releases](https://github.com/palmcivet/Arkeys/releases) for a newer version.
+
+Opening Settings queries GitHub for a newer release, at most once a day. A failed check usually means GitHub is unreachable and does not consume that daily slot. You can also check manually from **Settings → About → Check for Updates**.
+
+If a newer version exists, open the release page, download the latest build, and replace `Arkeys.app` in `/Applications`. Or upgrade with Homebrew:
+
+```bash
+brew upgrade --cask palmcivet/tap/arkeys
+```
 
 ## Uninstall
 

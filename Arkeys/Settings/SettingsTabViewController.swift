@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import AppUpdates
 import InputRuntime
 
 /// Native Safari / Calendar–style preference tabs via `NSTabViewController.tabStyle = .toolbar`.
@@ -10,6 +11,7 @@ final class SettingsTabViewController: NSTabViewController {
 
     private let runtime: InputRuntime
     private let editorSession: EditorSession
+    private let updateController: AppUpdateController
     private var motionObserver: NSObjectProtocol?
 
     enum Pane: Int, CaseIterable {
@@ -48,9 +50,10 @@ final class SettingsTabViewController: NSTabViewController {
         }
     }
 
-    init(runtime: InputRuntime, editorSession: EditorSession) {
+    init(runtime: InputRuntime, editorSession: EditorSession, updateController: AppUpdateController) {
         self.runtime = runtime
         self.editorSession = editorSession
+        self.updateController = updateController
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -125,7 +128,7 @@ final class SettingsTabViewController: NSTabViewController {
         case .compatibility:
             root = AnyView(CompatibilitySettingsView().environmentObject(runtime))
         case .about:
-            root = AnyView(AboutSettingsView())
+            root = AnyView(AboutSettingsView().environmentObject(updateController))
         }
         let controller = NSHostingController(rootView: root)
         // Preference panes use a fixed window height. If the host publishes an

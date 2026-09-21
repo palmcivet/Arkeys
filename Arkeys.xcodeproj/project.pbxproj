@@ -13,6 +13,7 @@
 		C44EA02B3004B6EC00D71C22 /* Injection in Frameworks */ = {isa = PBXBuildFile; productRef = A10000042DCD20000041B68C /* Injection */; };
 		C44EA02C3004B6EC00D71C22 /* InputRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = A10000052DCD20000041B68C /* InputRuntime */; };
 		C44EA02D3004B6EC00D71C22 /* EditorKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000062DCD20000041B68C /* EditorKit */; };
+		C44EA02E3004B6EC00D71C22 /* AppUpdates in Frameworks */ = {isa = PBXBuildFile; productRef = A10000072DCD20000041B68C /* AppUpdates */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,10 +34,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A10000202DCD20000041B68C /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 		C41E17252DCD08D90041B68C /* Arkeys.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arkeys.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C41E17332DCD08DA0041B68C /* ArkeysTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArkeysTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C41E173D2DCD08DA0041B68C /* ArkeysUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArkeysUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000202DCD20000041B68C /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C44EA02E3004B6EC00D71C22 /* AppUpdates in Frameworks */,
 				C44EA02D3004B6EC00D71C22 /* EditorKit in Frameworks */,
 				C44EA02C3004B6EC00D71C22 /* InputRuntime in Frameworks */,
 				C44EA02B3004B6EC00D71C22 /* Injection in Frameworks */,
@@ -78,6 +80,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A10000212DCD20000041B68C /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A10000202DCD20000041B68C /* Version.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		C41E171C2DCD08D90041B68C = {
 			isa = PBXGroup;
 			children = (
@@ -85,14 +95,6 @@
 				C41E17272DCD08D90041B68C /* Arkeys */,
 				C41E17262DCD08D90041B68C /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		A10000212DCD20000041B68C /* Config */ = {
-			isa = PBXGroup;
-			children = (
-				A10000202DCD20000041B68C /* Version.xcconfig */,
-			);
-			path = Config;
 			sourceTree = "<group>";
 		};
 		C41E17262DCD08D90041B68C /* Products */ = {
@@ -131,6 +133,7 @@
 				A10000042DCD20000041B68C /* Injection */,
 				A10000052DCD20000041B68C /* InputRuntime */,
 				A10000062DCD20000041B68C /* EditorKit */,
+				A10000072DCD20000041B68C /* AppUpdates */,
 			);
 			productName = Arkeys;
 			productReference = C41E17252DCD08D90041B68C /* Arkeys.app */;
@@ -216,6 +219,7 @@
 				A10000132DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/Injection" */,
 				A10000142DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/InputRuntime" */,
 				A10000152DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/EditorKit" */,
+				A10000162DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/AppUpdates" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C41E17262DCD08D90041B68C /* Products */;
@@ -458,7 +462,6 @@
 		C41E174B2DCD08DA0041B68C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -469,14 +472,12 @@
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arkeys.app/Contents/MacOS/Arkeys";
 			};
 			name = Debug;
 		};
 		C41E174C2DCD08DA0041B68C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -487,7 +488,6 @@
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Arkeys.app/Contents/MacOS/Arkeys";
 			};
 			name = Release;
 		};
@@ -591,6 +591,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/EditorKit;
 		};
+		A10000162DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/AppUpdates" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AppUpdates;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -623,6 +627,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10000152DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/EditorKit" */;
 			productName = EditorKit;
+		};
+		A10000072DCD20000041B68C /* AppUpdates */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000162DCD20000041B68C /* XCLocalSwiftPackageReference "Packages/AppUpdates" */;
+			productName = AppUpdates;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

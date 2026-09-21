@@ -25,6 +25,7 @@ Packages/
   Injection             Sending clicks and keystrokes via CGEvent / SkyLight / HID
   InputRuntime          Foreground-app detection, key dispatch, scheme persistence
   EditorKit             Editing overlays and key-label overlays
+  AppUpdates            GitHub release checks and update alerts
 ```
 
 Dependencies may only point downward; they must never point upward. The host application is responsible for wiring the packages together.
@@ -34,6 +35,7 @@ flowchart TB
     Arkeys --> InputRuntime
     Arkeys --> EditorKit
     Arkeys --> KeymapPlayCover
+    Arkeys --> AppUpdates
     InputRuntime --> Injection
     InputRuntime --> KeymapCore
     Injection --> Targeting
@@ -49,6 +51,7 @@ flowchart TB
 - Injection may use Targeting. Do not place key-mapping editing or SwiftUI here.
 - InputRuntime may compose KeymapCore, Injection, and Targeting. Do not place overlay UI here.
 - EditorKit may use KeymapCore and Targeting. Do not parse or write third-party formats, and do not send clicks.
+- AppUpdates may use Foundation and AppKit. Do not place settings UI, keymap data, or injection here.
 
 The host application is responsible for assembling these packages. Settings, the menu bar, and editing sessions all live in `Arkeys/`; they must not be placed in EditorKit or KeymapCore.
 

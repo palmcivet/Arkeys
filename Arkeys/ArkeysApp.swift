@@ -22,6 +22,9 @@ struct ArkeysApp: App {
                     appDelegate.openSettings()
                 }
             }
+            CommandGroup(replacing: .help) {
+                Link("menu.help", destination: AppLinks.repository)
+            }
         }
     }
 }

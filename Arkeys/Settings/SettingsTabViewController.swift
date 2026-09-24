@@ -27,7 +27,7 @@ final class SettingsTabViewController: NSTabViewController {
             case .general: return 460
             case .keymap: return 530
             case .compatibility: return 630
-            case .about: return 140
+            case .about: return 180
             }
         }
 
@@ -36,7 +36,7 @@ final class SettingsTabViewController: NSTabViewController {
             case .general: String(localized: "settings.tab.general")
             case .keymap: String(localized: "settings.tab.keymap")
             case .compatibility: String(localized: "settings.tab.compatibility")
-            case .about: String(localized: "settings.tab.about")
+            case .about: String(localized: "settings.tab.support")
             }
         }
 

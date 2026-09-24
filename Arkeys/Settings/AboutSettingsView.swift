@@ -34,6 +34,13 @@ struct AboutSettingsView: View {
                     }
                 }
                 .disabled(updates.isChecking)
+
+                HStack(spacing: 8) {
+                    Link("about.source", destination: AppLinks.repository)
+                    Text(verbatim: "·")
+                        .foregroundStyle(.secondary)
+                    Link("about.issues", destination: AppLinks.issues)
+                }
             }
         }
         .formStyle(.grouped)

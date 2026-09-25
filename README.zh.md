@@ -19,6 +19,7 @@
 - [开始使用](#开始使用)
 - [更新](#更新)
 - [卸载](#卸载)
+- [截图](#截图)
 - [注入方式](#注入方式)
     - [自动](#自动)
     - [按进程投递](#按进程投递)
@@ -30,9 +31,10 @@ macOS 辅助工具：用键盘快捷键在**目标应用窗口内**触发鼠标�
 ## 功能
 
 - 菜单栏常驻（默认不占 Dock），从状态栏图标打开设置
+- 目标窗口上的快捷键覆盖层，可调透明度和圆形 / 矩形键帽
 - 覆盖层编辑器：在目标窗口上摆放按钮并绑定按键
 - 支持导入 / 导出 PlayCover 的 `.plist` / `.playmap` 方案
-- 同一目标应用可保存多套方案，设置或菜单里切换
+- 可保存多个应用，每个应用多套方案，设置或菜单里切换
 - 分层注入：自动、按进程投递、SkyLight、全局 HID
 
 ## 系统要求
@@ -134,6 +136,28 @@ brew upgrade --cask palmcivet/tap/arkeys
 - `--keep-app` 只清数据
 
 若 `tccutil` 无法自动清 TCC，请到 **系统设置 → 隐私与安全性 → 辅助功能** 里移除 **Arkeys**。
+
+## 截图
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="Assets/settings-general.png" alt="常规设置">
+    </td>
+    <td width="50%" align="center">
+      <img src="Assets/settings-keymap.png" alt="键鼠方案">
+    </td>
+  </tr>
+</table>
+
+<details open>
+<summary>游戏截图</summary>
+
+<p align="center">
+  <img src="Assets/game-overlay.png" width="720" alt="游戏窗口上的快捷键覆盖层">
+</p>
+
+</details>
 
 ## 注入方式
 

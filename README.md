@@ -19,6 +19,7 @@
 - [Get started](#get-started)
 - [Updates](#updates)
 - [Uninstall](#uninstall)
+- [Screenshots](#screenshots)
 - [Injection](#injection)
     - [Automatic](#automatic)
     - [Post to Process](#post-to-process)
@@ -30,9 +31,10 @@ A macOS accessibility utility that maps keyboard shortcuts to mouse clicks **ins
 ## Features
 
 - Menu-bar agent (no Dock icon by default); settings open from the status item
+- Shortcut overlay on the target window, with adjustable opacity and circle or rectangle keycaps
 - Overlay editor: place buttons on the target window and assign keys
-- Supports import / export of PlayCover `.plist` / `.playmap` schemes
-- Multiple schemes per target app; switch from Settings or the menu
+- Import and export PlayCover `.plist` / `.playmap` schemes
+- Several apps, each with its own schemes; switch from Settings or the menu
 - Layered injection: Automatic, Post to Process, SkyLight, or Global HID
 
 ## Requirements
@@ -134,6 +136,28 @@ Preview first with `--dry-run`. Other options:
 - `--keep-app` reset data only
 
 If `tccutil` cannot clear TCC automatically, remove **Arkeys** from **System Settings → Privacy & Security → Accessibility**.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="Assets/settings-general.png" alt="General settings">
+    </td>
+    <td width="50%" align="center">
+      <img src="Assets/settings-keymap.png" alt="Keymap settings">
+    </td>
+  </tr>
+</table>
+
+<details open>
+<summary>Game screenshot</summary>
+
+<p align="center">
+  <img src="Assets/game-overlay.png" width="720" alt="Shortcut overlay on a game window">
+</p>
+
+</details>
 
 ## Injection
 
